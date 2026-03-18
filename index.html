@@ -256,7 +256,8 @@
 </div>
 
 <script>
-// === DISABLE DATALABELS GLOBALLY, ENABLE PER CHART ===
+// === REGISTER & DISABLE DATALABELS GLOBALLY, ENABLE PER CHART ===
+Chart.register(ChartDataLabels);
 Chart.defaults.plugins.datalabels = { display: false };
 
 let D;
