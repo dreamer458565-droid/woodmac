@@ -128,15 +128,15 @@
   <div id="tab3" class="tab-content">
     <div class="kpi-row" id="kpi3"></div>
     <div class="card">
-      <h3>인도네시아 니켈 생산 추이</h3>
-      <div class="desc">STO 기준 인도네시아 주요 플랜트별 생산량 추이 (kt Ni). <b>NPI → Matte → HPAL(MHP)</b> 전환 구조를 보여줌.</div>
-      <div class="cc"><canvas id="c31"></canvas></div>
+      <h3>인도네시아 니켈 생산 추이 — 플랜트별</h3>
+      <div class="desc">STO 기준 인도네시아 주요 플랜트별 생산량 (kt Ni). <b>NPI → Matte → HPAL(MHP)</b> 전환 구조. 막대 위 숫자는 연간 총합.</div>
+      <div class="cc" style="height:380px"><canvas id="c31"></canvas></div>
       <div class="tc" id="t31"></div>
     </div>
     <div class="card">
-      <h3>인도네시아 vs 중국 NPI 생산량 비교</h3>
-      <div class="desc">중국·인도네시아 합산 NPI 생산량에서 인도네시아 비중 추이.</div>
-      <div class="cc"><canvas id="c32"></canvas></div>
+      <h3>인도네시아 글로벌 점유율 & 중국 NPI 비교</h3>
+      <div class="desc">글로벌 제련 생산 대비 인도네시아 비중(%, 꺾은선) + 인도네시아 vs 중국 NPI 절대량(kt, 막대). <b>인도네시아가 글로벌 니켈 제련의 절반 이상 차지.</b></div>
+      <div class="cc" style="height:360px"><canvas id="c32"></canvas></div>
     </div>
   </div>
 
@@ -393,55 +393,114 @@ function initT3(){
   var id=D.tab3_indonesia;
   var plants=id.plants;
   var years=id.years;
+  var totalIndo=plants['Total Indonesia'];
+  var globalSmelter=D.tab5_supply.sto_production;
+
+  // 글로벌 대비 인도네시아 비중 계산 (연도 매칭)
+  var indoPct=years.map(function(y){
+    var iIdx=globalSmelter.years.indexOf(y);
+    if(iIdx<0||!totalIndo) return null;
+    var indoV=totalIndo.values[years.indexOf(y)];
+    var globV=globalSmelter.smelter[iIdx];
+    return(indoV&&globV)?+(indoV/globV*100).toFixed(1):null;
+  });
 
   // KPI
-  var totalIndo=plants['Total Indonesia'];
-  if(totalIndo){
-    var last=totalIndo.values[totalIndo.values.length-2];
-    var prev=totalIndo.values[totalIndo.values.length-3];
-    var yoy=prev?((last/prev-1)*100).toFixed(1):'-';
-    document.getElementById('kpi3').innerHTML=
-      '<div class="kpi"><div class="kpi-title">인도네시아 총생산 (2025E)</div><div class="kpi-val">'+F(last,0)+'kt</div><div class="kpi-note">YoY '+yoy+'%</div></div>'+
-      '<div class="kpi amber"><div class="kpi-title">2026 전망</div><div class="kpi-val">'+F(totalIndo.values[totalIndo.values.length-1],0)+'kt</div><div class="kpi-note">Forecast</div></div>';
-  }
+  var i25=years.indexOf(2025), i26=years.indexOf(2026);
+  var v25=totalIndo?totalIndo.values[i25]:null;
+  var v26=totalIndo?totalIndo.values[i26]:null;
+  var v24=totalIndo?totalIndo.values[years.indexOf(2024)]:null;
+  var yoy=v24&&v25?((v25/v24-1)*100).toFixed(1):'-';
+  var pct25=indoPct[i25], pct26=indoPct[i26];
+  var chinaData=plants['Total China (NPI)'];
+  var cV25=chinaData?chinaData.values[i25]:null;
+  document.getElementById('kpi3').innerHTML=
+    '<div class="kpi"><div class="kpi-title">인도네시아 총생산 (2025E)</div><div class="kpi-val">'+F(v25,0)+'<span style="font-size:13px"> kt</span></div><div class="kpi-note">YoY '+yoy+'%</div></div>'+
+    '<div class="kpi amber"><div class="kpi-title">2026 전망</div><div class="kpi-val">'+F(v26,0)+'<span style="font-size:13px"> kt</span></div><div class="kpi-note">Forecast</div></div>'+
+    '<div class="kpi green"><div class="kpi-title">글로벌 제련 점유율 (2025E)</div><div class="kpi-val">'+(pct25?pct25.toFixed(1):'–')+'<span style="font-size:13px">%</span></div><div class="kpi-note">2026E '+(pct26?pct26.toFixed(1):'–')+'%</div></div>'+
+    '<div class="kpi red"><div class="kpi-title">인도네시아 vs 중국 NPI (2025E)</div><div class="kpi-val">'+F(v25,0)+'<span style="font-size:11px"> vs </span>'+F(cV25,0)+'<span style="font-size:13px"> kt</span></div><div class="kpi-note">인도네시아가 중국의 '+(v25&&cV25?(v25/cV25*100).toFixed(0):'–')+'%</div></div>';
 
-  // Chart 1: 플랜트별 스택드 바
+  // Chart 1: 플랜트별 스택드 바 + 합계 datalabels
   var plantNames=['Tsingshan Morowali','Weda Bay','Indonesian Matte','Morowali HPAL'];
   var colors=['#1a4a7a','#2980b9','#f9a825','#43a047'];
-  var datasets=plantNames.map(function(p,i){return{label:p,data:(plants[p]?plants[p].values:years.map(function(){return null;})),backgroundColor:colors[i],stack:'total'};});
+  var datasets=plantNames.map(function(p,i){
+    return{label:p,data:(plants[p]?plants[p].values:years.map(function(){return null;})),backgroundColor:colors[i],stack:'total'};
+  });
+  // 합계 표시용 투명 더미 dataset
+  var totals=years.map(function(y,yi){
+    return plantNames.reduce(function(s,p){return s+(plants[p]&&plants[p].values[yi]?plants[p].values[yi]:0);},0);
+  });
+  datasets.push({
+    label:'_total',data:totals,backgroundColor:'rgba(0,0,0,0)',stack:'total',
+    datalabels:{
+      display:true,anchor:'end',align:'end',
+      color:'#333',font:{size:11,weight:'bold'},
+      formatter:function(v){return v>0?Math.round(v)+'kt':'';}
+    }
+  });
 
   new Chart(document.getElementById('c31'),{
     type:'bar',
     data:{labels:years,datasets:datasets},
     options:{
       responsive:true,maintainAspectRatio:false,
-      scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'}}},
-      plugins:{legend:{position:'bottom'},datalabels:{display:false}}
+      scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'},max:Math.max.apply(null,totals)*1.15}},
+      plugins:{
+        legend:{position:'bottom',labels:{filter:function(item){return item.text!=='_total';}}},
+        datalabels:{
+          display:function(ctx){
+            // 각 세그먼트 내부에 값 표시 (null/0 제외)
+            if(ctx.dataset.label==='_total') return true;
+            var v=ctx.dataset.data[ctx.dataIndex];
+            return v&&v>20;
+          },
+          anchor:'center',align:'center',
+          color:'white',font:{size:10,weight:'bold'},
+          formatter:function(v,ctx){
+            if(ctx.dataset.label==='_total') return null;
+            return v?Math.round(v):'';
+          }
+        }
+      }
     }
   });
 
-  // Chart 2: 인도네시아 vs 중국 비교
-  var chinaData=plants['Total China (NPI)'];
+  // Chart 2: 절대량 바 + 글로벌 비중 꺾은선 (이중축)
   new Chart(document.getElementById('c32'),{
     type:'bar',
     data:{
       labels:years,
       datasets:[
-        {label:'인도네시아',data:totalIndo?totalIndo.values:[],backgroundColor:'#1a4a7a'},
-        {label:'중국 NPI',data:chinaData?chinaData.values:[],backgroundColor:'#e53935'}
+        {type:'bar',label:'인도네시아 (kt)',data:totalIndo?totalIndo.values:[],backgroundColor:'#1a4a7a',yAxisID:'y',
+          datalabels:{display:true,anchor:'end',align:'end',color:'#1a4a7a',font:{size:10,weight:'bold'},formatter:function(v){return v?Math.round(v)+'kt':'';}
+        }},
+        {type:'bar',label:'중국 NPI (kt)',data:chinaData?chinaData.values:[],backgroundColor:'rgba(229,57,53,0.7)',yAxisID:'y',
+          datalabels:{display:true,anchor:'end',align:'end',color:'#c0392b',font:{size:10,weight:'bold'},formatter:function(v){return v?Math.round(v)+'kt':'';}
+        }},
+        {type:'line',label:'글로벌 점유율 (%)',data:indoPct,borderColor:'#f9a825',backgroundColor:'rgba(249,168,37,0.15)',
+          yAxisID:'y2',tension:0.3,pointRadius:5,pointBackgroundColor:'#f9a825',borderWidth:2.5,fill:true,
+          datalabels:{display:true,anchor:'top',align:'top',color:'#d4860c',font:{size:11,weight:'bold'},formatter:function(v){return v?v.toFixed(1)+'%':'';}
+        }}
       ]
     },
     options:{
       responsive:true,maintainAspectRatio:false,
-      scales:{y:{title:{display:true,text:'kt Ni'}}},
-      plugins:{legend:{position:'bottom'},datalabels:{display:false}}
+      scales:{
+        y:{title:{display:true,text:'kt Ni'},position:'left'},
+        y2:{title:{display:true,text:'글로벌 비중 (%)'},position:'right',grid:{drawOnChartArea:false},min:0,max:100,
+          ticks:{callback:function(v){return v+'%';}}}
+      },
+      plugins:{legend:{position:'bottom'},datalabels:{}}
     }
   });
 
-  // Table
-  mt('t31',['플랜트','유형'].concat(years.map(String)),
-    plantNames.filter(function(p){return plants[p];}).map(function(p){return [p,plants[p].type].concat(plants[p].values.map(function(v){return F(v,1);}));})
-  );
+  // Table: 비중 열 추가
+  var tableRows=plantNames.filter(function(p){return plants[p];}).map(function(p){
+    return[p,plants[p].type].concat(plants[p].values.map(function(v){return F(v,1);}));
+  });
+  tableRows.push(['Total Indonesia',''].concat(totalIndo?totalIndo.values.map(function(v){return F(v,1);}):[]));
+  tableRows.push(['글로벌 비중(%)',''].concat(indoPct.map(function(v){return v?v.toFixed(1)+'%':'-';})));
+  mt('t31',['플랜트','유형'].concat(years.map(String)),tableRows);
 }
 
 function initT4(){
