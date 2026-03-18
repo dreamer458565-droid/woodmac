@@ -1,0 +1,7 @@
+.DS_Store
+.vercel
+__pycache__/
+*.pyc
+데이터/
+*.xls
+*.xlsx

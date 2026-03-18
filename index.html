@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wood Mackenzie 니켈 시장 대시보드</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Malgun Gothic','맑은 고딕',-apple-system,sans-serif;background:#f4f6f9;color:#333;line-height:1.6}
+    .header{background:linear-gradient(135deg,#0d2137 0%,#1a4a7a 100%);color:white;padding:22px 24px;box-shadow:0 2px 12px rgba(0,0,0,0.15)}
+    .header h1{font-size:26px;font-weight:700;letter-spacing:-0.5px}
+    .header .sub{font-size:12px;opacity:0.85;margin-top:4px}
+    .header .ver{font-size:10px;opacity:0.6;margin-top:2px}
+    .container{max-width:1440px;margin:16px auto;padding:0 16px}
+    .tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid #dde;flex-wrap:wrap;background:white;padding:4px 8px 0;border-radius:8px 8px 0 0}
+    .tab-btn{padding:10px 18px;background:transparent;border:none;cursor:pointer;font-size:13px;font-weight:500;border-bottom:3px solid transparent;transition:all .2s;color:#777}
+    .tab-btn:hover{color:#333}
+    .tab-btn.active{color:#0d2137;border-bottom-color:#1a4a7a;font-weight:700}
+    .tab-content{display:none}.tab-content.active{display:block}
+    .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}
+    .kpi{background:white;border-radius:8px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);border-left:4px solid #1a4a7a;position:relative}
+    .kpi.green{border-left-color:#43a047}.kpi.red{border-left-color:#e53935}.kpi.amber{border-left-color:#f9a825}
+    .kpi-title{font-size:11px;color:#888;font-weight:500;margin-bottom:2px}
+    .kpi-val{font-size:24px;font-weight:700;color:#0d2137}
+    .kpi-note{font-size:10px;color:#aaa;margin-top:2px}
+    .card{background:white;border-radius:8px;padding:16px 18px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+    .card h3{font-size:15px;color:#0d2137;margin-bottom:2px;font-weight:700}
+    .card .desc{font-size:11.5px;color:#777;margin-bottom:10px;line-height:1.5;border-bottom:1px solid #f0f0f0;padding-bottom:8px}
+    .card .desc b{color:#0d2137}
+    .ctrl{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+    .vt{display:flex;gap:3px}
+    .vb{padding:5px 10px;background:#eef;border:1px solid #dde;border-radius:4px;cursor:pointer;font-size:11px;color:#555;transition:all .2s}
+    .vb:hover{background:#ddf}.vb.on{background:#1a4a7a;color:white;border-color:#1a4a7a}
+    .fg{display:flex;gap:6px;align-items:center}
+    .fg label{font-size:10px;color:#999}
+    .fg select{padding:4px 6px;border:1px solid #dde;border-radius:3px;font-size:11px}
+    .dl{padding:5px 10px;background:#43a047;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px}
+    .dl:hover{background:#388e3c}
+    .cc{position:relative;height:360px;margin-bottom:8px}
+    .tc{overflow-x:auto;margin-top:6px;max-height:400px;overflow-y:auto}
+    table{width:100%;border-collapse:collapse;font-size:11.5px}
+    th{background:#f5f7fa;padding:8px;text-align:right;font-weight:600;color:#444;border-bottom:2px solid #dde;position:sticky;top:0;z-index:1}
+    th:first-child{text-align:left}
+    td{padding:6px 8px;border-bottom:1px solid #eef;text-align:right}
+    td:first-child{text-align:left;font-weight:500;color:#333}
+    tbody tr:nth-child(odd){background:#fafbfc}
+    tbody tr:hover{background:#f0f4f8}
+    .neg{color:#e53935}.pos{color:#43a047}
+    .src{font-size:9px;color:#bbb;text-align:right;margin-top:4px}
+    @media(max-width:768px){.header h1{font-size:20px}.kpi-row{grid-template-columns:1fr 1fr}.cc{height:280px}table{font-size:10px}}
+  </style>
+</head>
+<body>
+<div class="header">
+  <h1>Wood Mackenzie 니켈 시장 대시보드</h1>
+  <div class="sub">월간 단기전망 (STO) : 2026년 2월호 &nbsp;│&nbsp; 분기 장기전망 (IHO) : 2025년 4분기 (12월)</div>
+  <div class="ver">STO: nickel_sto_data_tables_february_2026.xls │ IHO: market-balance / demand-analysis / refinery-analysis (Dec 2025) │ 최종 업데이트: 2026.03.18</div>
+</div>
+<div class="container">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="sw('tab1',this)">글로벌 수급 균형</button>
+    <button class="tab-btn" onclick="sw('tab2',this)">EV 배터리 니켈</button>
+    <button class="tab-btn" onclick="sw('tab3',this)">암바토비 포지셔닝</button>
+    <button class="tab-btn" onclick="sw('tab4',this)">대한민국 시장</button>
+    <button class="tab-btn" onclick="sw('tab5',this)">데이터 관리</button>
+  </div>
+
+  <!-- TAB 1 -->
+  <div id="tab1" class="tab-content active">
+    <div class="kpi-row" id="k1"></div>
+    <div class="card"><h3>글로벌 분야별 1차 니켈 수요</h3>
+      <p class="desc">글로벌 1차 니켈 수요를 <b>스테인리스, 배터리 전구체, 비철합금, 합금강, 도금</b> 등 분야별로 구분합니다. 배터리 전구체가 <b>2020년 195kt(8%) → 2025년 541kt(15%) → 2030년 1,055kt(23%)</b>으로 스테인리스에 이어 2위 수요처로 급부상 중입니다. (IHO)</p>
+      <div class="ctrl"><div class="vt"><button class="vb on" onclick="tv(this,'ch11','tb11')">차트</button><button class="vb" onclick="tv(this,'tb11','ch11')">테이블</button></div><div class="fg"><label>시작:</label><select id="s11" onchange="ft('tw11','s11','e11')"></select><label>종료:</label><select id="e11" onchange="ft('tw11','s11','e11')"></select></div><button class="dl" onclick="dl('tw11')">CSV</button></div>
+      <div id="ch11" class="cc"><canvas id="cv11"></canvas></div>
+      <div id="tb11" class="tc" style="display:none"><div id="tw11"></div></div></div>
+
+    <div class="card"><h3>생산능력 vs 소비 · 잉여/적자</h3>
+      <p class="desc"><b>생산능력</b>(파란선)과 <b>소비</b>(주황선)는 좌축, <b>잉여/적자</b>(막대)는 우축입니다. 2025년 <b>잉여 +423kt</b>이나 소비 증가 속도가 빨라 <b>2031년경 적자 전환</b>이 예상됩니다. (IHO)</p>
+      <div class="ctrl"><div class="vt"><button class="vb on" onclick="tv(this,'ch12','tb12')">차트</button><button class="vb" onclick="tv(this,'tb12','ch12')">테이블</button></div><div class="fg"><label>시작:</label><select id="s12" onchange="ft('tw12','s12','e12')"></select><label>종료:</label><select id="e12" onchange="ft('tw12','s12','e12')"></select></div><button class="dl" onclick="dl('tw12')">CSV</button></div>
+      <div id="ch12" class="cc"><canvas id="cv12"></canvas></div>
+      <div id="tb12" class="tc" style="display:none"><div id="tw12"></div></div></div>
+
+    <div class="card"><h3>분기별 LME 니켈 가격 · 거래소 재고</h3>
+      <p class="desc"><b>LME 현물가격</b>(빨간선, 좌축 $/t)과 <b>거래소 재고</b>(파란막대, 우축 kt). 2025Q1 <b>$15,564/t</b>에서 2026Q1 <b>$17,409/t</b>으로 상승 후 하락 전망. 재고는 점진적 증가 추세입니다. (STO)</p>
+      <div class="ctrl"><div class="vt"><button class="vb on" onclick="tv(this,'ch13','tb13')">차트</button><button class="vb" onclick="tv(this,'tb13','ch13')">테이블</button></div><button class="dl" onclick="dl('tw13')">CSV</button></div>
+      <div id="ch13" class="cc"><canvas id="cv13"></canvas></div>
+      <div id="tb13" class="tc" style="display:none"><div id="tw13"></div></div></div>
+
+    <div class="card"><h3>Class별 수급 균형</h3>
+      <p class="desc"><b>Class I</b>(정제니켈: 브리켓·카토드) 지속 잉여(+135kt, 2028). <b>Class II</b>(FeNi·NPI) 2023년 +194kt 잉여에서 2028년 <b>-113kt 적자</b>로 급반전 — 인니 NPI 증설 둔화 반영. <b>황산염</b>(NiSO₄)은 적자에서 2024년 이후 <b>잉여로 전환</b>(+78kt, 2028) — 배터리급 설비 증설 효과. (STO)</p>
+      <div class="ctrl"><div class="vt"><button class="vb on" onclick="tv(this,'ch14','tb14')">차트</button><button class="vb" onclick="tv(this,'tb14','ch14')">테이블</button></div><button class="dl" onclick="dl('tw14')">CSV</button></div>
+      <div id="ch14" class="cc"><canvas id="cv14"></canvas></div>
+      <div id="tb14" class="tc" style="display:none"><div id="tw14"></div></div></div>
+  </div>
+
+  <!-- TAB 2 -->
+  <div id="tab2" class="tab-content">
+    <div class="kpi-row" id="k2"></div>
+    <div class="card"><h3>국가별 배터리 니켈 수요 및 성장률</h3>
+      <p class="desc"><b>중국</b>이 절대 1위(2028년 638kt, 글로벌 78%). <b>한국</b> 4위(67kt), <b>인도네시아</b> 신규 진입 고속 성장(0→21kt). 글로벌 합계 성장률은 우축(선)으로, 2024→2025 <b>+5%</b>에서 2026→2027 <b>+18%</b>로 가속 전망. (STO)</p>
+      <div class="ctrl"><div class="vt"><button class="vb on" onclick="tv(this,'ch21','tb21')">차트</button><button class="vb" onclick="tv(this,'tb21','ch21')">테이블</button></div><button class="dl" onclick="dl('tw21')">CSV</button></div>
+      <div id="ch21" class="cc"><canvas id="cv21"></canvas></div>
+      <div id="tb21" class="tc" style="display:none"><div id="tw21"></div></div></div>
+
+    <div class="card"><h3>배터리 니켈 침투율 추이</h3>
+      <p class="desc">전체 1차 니켈 수요에서 배터리 전구체가 차지하는 비중 추이입니다. <b>2015년 1.8% → 2020년 8.0% → 2025년 15.3% → 2030년 23.1% → 2035년 30.8%</b>로, 니켈 시장의 구조적 전환이 진행 중입니다. (IHO)</p>
+      <div class="ctrl"><div class="vt"><button class="vb on" onclick="tv(this,'ch22','tb22')">차트</button><button class="vb" onclick="tv(this,'tb22','ch22')">테이블</button></div><button class="dl" onclick="dl('tw22')">CSV</button></div>
+      <div id="ch22" class="cc"><canvas id="cv22"></canvas></div>
+      <div id="tb22" class="tc" style="display:none"><div id="tw22"></div></div></div>
+
+    <div class="card"><h3>배터리 양극재 화학 구성</h3>
+      <p class="desc">니켈 함유 양극재(pCAM) 화학별 비중. <b>NMC811(하이니켈) 10.5%</b>가 최대, NMC622(6.6%), NMC532(4.9%), NCA(4.2%) 순. 니켈 양극재 합계 <b>38.4%</b>, 비니켈(LFP 등) <b>61.6%</b>. (STO)</p>
+      <div class="ctrl"><div class="vt"><button class="vb on" onclick="tv(this,'ch23','tb23')">차트</button><button class="vb" onclick="tv(this,'tb23','ch23')">테이블</button></div><button class="dl" onclick="dl('tw23')">CSV</button></div>
+      <div id="ch23" class="cc"><canvas id="cv23"></canvas></div>
+      <div id="tb23" class="tc" style="display:none"><div id="tw23"></div></div></div>
+
+    <div class="card"><h3>배터리 니켈 최종 용도별 비중</h3>
+      <p class="desc">배터리 니켈의 최종 용도. <b>전기차(EV) 88.9%</b>로 압도적. ESS 5.5%, 포터블 전자기기 2.5%, 전력기기 2.2%. (STO)</p>
+      <div class="ctrl"><div class="vt"><button class="vb on" onclick="tv(this,'ch24','tb24')">차트</button><button class="vb" onclick="tv(this,'tb24','ch24')">테이블</button></div><button class="dl" onclick="dl('tw24')">CSV</button></div>
+      <div id="ch24" class="cc"><canvas id="cv24"></canvas></div>
+      <div id="tb24" class="tc" style="display:none"><div id="tw24"></div></div></div>
+  </div>
+
+  <!-- TAB 3 -->
+  <div id="tab3" class="tab-content">
+    <div class="kpi-row" id="k3"></div>
+    <div class="card"><h3>암바토비 생산 라이프사이클</h3>
+      <p class="desc">마다가스카르 암바토비 니켈광산의 연도별 생산량. 2015년 <b>47.3kt 피크</b> 후 감소, 2020년 코로나로 <b>9.9kt</b>까지 급락 후 회복. IHO 기준 2029년 이후 <b>35kt 안정화</b> 전망. 파란색=실적, 주황색=전망. (IHO Refinery)</p>
+      <div class="ctrl"><div class="vt"><button class="vb on" onclick="tv(this,'ch31','tb31')">차트</button><button class="vb" onclick="tv(this,'tb31','ch31')">테이블</button></div><div class="fg"><label>시작:</label><select id="s31" onchange="ft('tw31','s31','e31')"></select><label>종료:</label><select id="e31" onchange="ft('tw31','s31','e31')"></select></div><button class="dl" onclick="dl('tw31')">CSV</button></div>
+      <div id="ch31" class="cc"><canvas id="cv31"></canvas></div>
+      <div id="tb31" class="tc" style="display:none"><div id="tw31"></div></div></div>
+
+    <div class="card"><h3>월간 단기전망(STO) vs 분기 장기전망(IHO) 비교</h3>
+      <p class="desc">동일 기간에 대한 두 전망의 비교. 2022~2024 실적은 동일하나, <b>2025년 STO 28kt vs IHO 28kt</b>(일치), <b>2026년 STO 29kt vs IHO 32kt</b>(+3kt 차이). STO가 더 보수적입니다.</p>
+      <div class="ctrl"><div class="vt"><button class="vb on" onclick="tv(this,'ch32','tb32')">차트</button><button class="vb" onclick="tv(this,'tb32','ch32')">테이블</button></div><button class="dl" onclick="dl('tw32')">CSV</button></div>
+      <div id="ch32" class="cc"><canvas id="cv32"></canvas></div>
+      <div id="tb32" class="tc" style="display:none"><div id="tw32"></div></div></div>
+
+    <div class="card"><h3>글로벌 정제니켈 대비 점유율</h3>
+      <p class="desc">글로벌 정제니켈 총 생산 대비 암바토비 비중(%). 2022년 <b>1.14%</b>에서 2028년 <b>0.72%</b>로 하락 전망 — 글로벌 정제 증가 대비 암바토비 생산 정체 때문. (STO 기준)</p>
+      <div class="ctrl"><div class="vt"><button class="vb on" onclick="tv(this,'ch33','tb33')">차트</button><button class="vb" onclick="tv(this,'tb33','ch33')">테이블</button></div><button class="dl" onclick="dl('tw33')">CSV</button></div>
+      <div id="ch33" class="cc"><canvas id="cv33"></canvas></div>
+      <div id="tb33" class="tc" style="display:none"><div id="tw33"></div></div></div>
+  </div>
+
+  <!-- TAB 4 -->
+  <div id="tab4" class="tab-content">
+    <div class="kpi-row" id="k4"></div>
+    <div class="card"><h3>한국 총 니켈 소비 · 배터리 비중</h3>
+      <p class="desc">한국 1차 니켈 총 소비(회색 막대)와 배터리 수요(빨간 막대), 배터리 비중(선, 우축). 배터리 비중이 <b>2022년 25% → 2028년 45%</b>로 급증하며 한국 니켈 수요 구조가 배터리 중심으로 전환 중. (STO)</p>
+      <div class="ctrl"><div class="vt"><button class="vb on" onclick="tv(this,'ch41','tb41')">차트</button><button class="vb" onclick="tv(this,'tb41','ch41')">테이블</button></div><button class="dl" onclick="dl('tw41')">CSV</button></div>
+      <div id="ch41" class="cc"><canvas id="cv41"></canvas></div>
+      <div id="tb41" class="tc" style="display:none"><div id="tw41"></div></div></div>
+
+    <div class="card"><h3>한국 산업별 니켈 수요 구조</h3>
+      <p class="desc">한국 산업별 1차 니켈 수요 추이. <b>스테인리스</b>(파란)가 전통 1위이나, <b>배터리 전구체</b>(빨간)가 빠르게 추격. 2030년경 역전 가능성. (IHO)</p>
+      <div class="ctrl"><div class="vt"><button class="vb on" onclick="tv(this,'ch42','tb42')">차트</button><button class="vb" onclick="tv(this,'tb42','ch42')">테이블</button></div><div class="fg"><label>시작:</label><select id="s42" onchange="ft('tw42','s42','e42')"></select><label>종료:</label><select id="e42" onchange="ft('tw42','s42','e42')"></select></div><button class="dl" onclick="dl('tw42')">CSV</button></div>
+      <div id="ch42" class="cc"><canvas id="cv42"></canvas></div>
+      <div id="tb42" class="tc" style="display:none"><div id="tw42"></div></div></div>
+
+    <div class="card"><h3>한국 SS 공장별 생산능력</h3>
+      <p class="desc"><b>Posco</b>(파란)가 압도적, Seah Besteel·Bae Myung Metal 순. 2025년 기준 합계 <b>2,460 kt SS</b>. (IHO)</p>
+      <div class="ctrl"><div class="vt"><button class="vb on" onclick="tv(this,'ch43','tb43')">차트</button><button class="vb" onclick="tv(this,'tb43','ch43')">테이블</button></div><div class="fg"><label>시작:</label><select id="s43" onchange="ft('tw43','s43','e43')"></select><label>종료:</label><select id="e43" onchange="ft('tw43','s43','e43')"></select></div><button class="dl" onclick="dl('tw43')">CSV</button></div>
+      <div id="ch43" class="cc"><canvas id="cv43"></canvas></div>
+      <div id="tb43" class="tc" style="display:none"><div id="tw43"></div></div></div>
+  </div>
+
+  <!-- TAB 5 -->
+  <div id="tab5" class="tab-content">
+    <div class="card"><h3>데이터 소스 · 버전 정보</h3>
+      <div class="tc"><table>
+        <thead><tr><th style="text-align:left">구분</th><th style="text-align:left">파일명</th><th style="text-align:left">발간</th><th style="text-align:left">범위</th><th style="text-align:left">주요 내용</th></tr></thead>
+        <tbody>
+          <tr><td>월간 단기전망 (STO)</td><td style="font-size:10px">nickel_sto_data_tables_february_2026.xls</td><td>2026.02</td><td>2022~2028(분기)</td><td>분기별 공급/소비/균형, LME 가격, 국가별 배터리, 화학 구성, Class별 수급</td></tr>
+          <tr><td rowspan="3">분기 장기전망 (IHO)</td><td style="font-size:10px">nickel-market-balance-prices-dec-2025.xls</td><td>2025.12</td><td>1986~2050(연간)</td><td>생산능력, 정제산출, 소비, 잉여/적자</td></tr>
+          <tr><td style="font-size:10px">nickel-demand-analysis-dec-2025.xlsx</td><td>2025.12</td><td>1995~2050(연간)</td><td>글로벌/국가별 산업 수요, 한국 SS 설비</td></tr>
+          <tr><td style="font-size:10px">nickel-refinery-analysis-dec-2025.xls</td><td>2025.12</td><td>1994~2050(연간)</td><td>정제소별 생산, 암바토비</td></tr>
+        </tbody></table></div></div>
+    <div class="card"><h3>사용 안내</h3>
+      <div style="font-size:12px;line-height:1.8;color:#666">
+        <p><b>차트/테이블 전환</b> — 각 섹션 [차트]/[테이블] 버튼으로 전환합니다.</p>
+        <p><b>연도 필터</b> — 시작/종료 연도 선택시 테이블이 필터링됩니다.</p>
+        <p><b>CSV 다운로드</b> — 현재 보이는 데이터를 CSV(Excel 호환)로 다운로드합니다.</p>
+        <p><b>단위</b> — 생산/소비/수요 = 천 톤(kt Ni), 가격 = US$/t, SS 설비 = kt SS</p>
+      </div></div>
+  </div>
+</div>
+
+<script>
+// === DISABLE DATALABELS GLOBALLY, ENABLE PER CHART ===
+Chart.defaults.plugins.datalabels = { display: false };
+
+let D;
+let C={},TI={tab1:0,tab2:0,tab3:0,tab4:0};
+
+function sw(t,b){document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));document.getElementById(t).classList.add('active');b.classList.add('active');if(!TI[t]){TI[t]=1;setTimeout(()=>initT(t),60);}else{setTimeout(()=>{Object.keys(C).forEach(k=>{try{C[k].resize();}catch(e){}});},80);}}
+function tv(b,s,h){document.getElementById(s).style.display='block';document.getElementById(h).style.display='none';b.parentElement.querySelectorAll('.vb').forEach(x=>x.classList.remove('on'));b.classList.add('on');}
+function ft(w,si,ei){var el=document.getElementById(w);if(!el)return;var t=el.querySelector('table');if(!t)return;var s=parseInt(document.getElementById(si).value)||0,e=parseInt(document.getElementById(ei).value)||9999;t.querySelectorAll('tbody tr').forEach(r=>{var y=parseInt(r.cells[0].textContent);r.style.display=(y>=s&&y<=e)?'':'none';});}
+function dl(w){var el=document.getElementById(w);if(!el)return;var t=el.querySelector('table');if(!t)return;var c='\uFEFF'+'Wood Mackenzie 니켈 시장 대시보드\n월간 단기전망(STO): 2026년 2월 / 분기 장기전망(IHO): Q4 2025\n다운로드: '+new Date().toLocaleString('ko-KR')+'\n\n';t.querySelectorAll('tr').forEach(r=>{if(r.style.display!=='none'){var cells=Array.from(r.querySelectorAll('th,td')).map(x=>'"'+x.textContent.trim().replace(/"/g,'""')+'"');c+=cells.join(',')+'\n';}});var b=new Blob([c],{type:'text/csv;charset=utf-8;'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='nickel_'+new Date().toISOString().slice(0,10)+'.csv';a.click();}
+function ff(id,yrs){var s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">전체</option>';[...new Set(yrs)].filter(y=>y&&!isNaN(y)).sort((a,b)=>a-b).forEach(y=>{var o=document.createElement('option');o.value=y;o.textContent=y;s.appendChild(o);});}
+function mt(w,hd,rows){var el=document.getElementById(w);if(!el)return;var h='<table><thead><tr>';hd.forEach(x=>{h+='<th>'+x+'</th>';});h+='</tr></thead><tbody>';rows.forEach(r=>{h+='<tr>';r.forEach((c,i)=>{var cls=i>0&&typeof c==='string'&&c.startsWith('-')?' class="neg"':'';h+='<td'+cls+'>'+c+'</td>';});h+='</tr>';});h+='</tbody></table>';el.innerHTML=h;}
+function N(v){return Number(v||0);}
+function F(v,d){return N(v).toFixed(d===undefined?1:d);}
+function pct(a,b){return b?((a/b)*100).toFixed(1):'0.0';}
+
+function initT(t){try{if(t==='tab2')initT2();else if(t==='tab3')initT3();else if(t==='tab4')initT4();}catch(e){console.error(t,e);}}
+
+function initT1(){
+  var iho=D.tab1_global_balance.iho_annual, stq=D.tab1_global_balance.sto_quarterly, gsd=D.tab1_global_balance.global_sector_demand, cb=D.tab1_global_balance.sto_class_balance;
+  var i25=iho.years.indexOf(2025),i30=iho.years.indexOf(2030);
+  var prod25=N(iho.production_capability[i25]),cons25=N(iho.consumption[i25]),sd25=N(iho.surplus_deficit[i25]);
+  var latestQ=stq[stq.length-1];
+  var batPen25=pct(N(gsd.sectors['Battery precursors'][gsd.years.indexOf(2025)]),N(gsd.sectors['Total primary nickel demand'][gsd.years.indexOf(2025)]));
+
+  document.getElementById('k1').innerHTML=
+    '<div class="kpi"><div class="kpi-title">2025 생산능력 (IHO)</div><div class="kpi-val">'+F(prod25,0)+'<span style="font-size:13px"> kt</span></div></div>'+
+    '<div class="kpi"><div class="kpi-title">2025 소비 (IHO)</div><div class="kpi-val">'+F(cons25,0)+'<span style="font-size:13px"> kt</span></div></div>'+
+    '<div class="kpi '+(sd25>=0?'green':'red')+'"><div class="kpi-title">2025 잉여/적자</div><div class="kpi-val" style="color:'+(sd25>=0?'#43a047':'#e53935')+'">'+F(sd25,0)+'<span style="font-size:13px"> kt</span></div></div>'+
+    '<div class="kpi amber"><div class="kpi-title">LME 가격 ('+latestQ.quarter+')</div><div class="kpi-val">$'+F(latestQ.lme_price_usd,0)+'</div></div>'+
+    '<div class="kpi"><div class="kpi-title">배터리 침투율 (2025)</div><div class="kpi-val">'+batPen25+'%</div><div class="kpi-note">전체 1차 Ni 수요 대비</div></div>';
+
+  // 1-1: Sector Demand Stacked
+  var sN=['Primary nickel in stainless','Battery precursors','Non-Ferrous Alloys','Alloy Steel','Plating','Foundry','Other'];
+  var sL=['스테인리스','배터리 전구체','비철합금','합금강','도금','주물','기타'];
+  var sC=['#1565C0','#e53935','#F57C00','#7B1FA2','#00897B','#6D4C41','#78909C'];
+  var gy=gsd.years.filter(y=>y>=2015&&y<=2035),gi=gy.map(y=>gsd.years.indexOf(y));
+
+  C['cv11']=new Chart(document.getElementById('cv11'),{type:'bar',
+    data:{labels:gy,datasets:sN.map((n,si)=>({label:sL[si],data:gi.map(i=>N(gsd.sectors[n][i])),backgroundColor:sC[si]}))},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'}}},
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+      datalabels:{display:function(ctx){return ctx.datasetIndex===sN.length-1;},anchor:'end',align:'top',font:{size:9,weight:'bold'},color:'#333',
+        formatter:function(v,ctx){var t=0;ctx.chart.data.datasets.forEach(ds=>{t+=N(ds.data[ctx.dataIndex]);});return t.toFixed(0);}}}}});
+
+  mt('tw11',['연도'].concat(sL).concat(['합계']).concat(sL.map(s=>s+'(%)')),gy.map((y,yi)=>{var i=gi[yi];var tot=N(gsd.sectors['Total primary nickel demand'][i]);var vals=sN.map(n=>N(gsd.sectors[n][i]));return [y].concat(vals.map(v=>F(v))).concat([F(tot)]).concat(vals.map(v=>tot>0?(v/tot*100).toFixed(1):'-'));}));
+  ff('s11',gy);ff('e11',gy);
+
+  // 1-2: Prod vs Cons (lines, left) + Surplus (bar, right) — DUAL AXIS
+  var yr=iho.years.filter(y=>y>=2015&&y<=2035),ix=yr.map(y=>iho.years.indexOf(y));
+  var sdArr=ix.map(i=>N(iho.surplus_deficit[i]));
+
+  C['cv12']=new Chart(document.getElementById('cv12'),{type:'bar',
+    data:{labels:yr,datasets:[
+      {type:'line',label:'생산능력',data:ix.map(i=>N(iho.production_capability[i])),borderColor:'#1565C0',backgroundColor:'rgba(21,101,192,0.08)',borderWidth:2.5,tension:.3,pointRadius:1,fill:true,yAxisID:'y',order:1},
+      {type:'line',label:'소비',data:ix.map(i=>N(iho.consumption[i])),borderColor:'#F57C00',backgroundColor:'rgba(245,124,0,0.08)',borderWidth:2.5,tension:.3,pointRadius:1,fill:true,yAxisID:'y',order:2},
+      {type:'bar',label:'잉여/적자',data:sdArr,backgroundColor:sdArr.map(v=>v>=0?'rgba(67,160,71,0.65)':'rgba(229,57,53,0.65)'),yAxisID:'y1',order:3,barPercentage:0.6}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{y:{position:'left',title:{display:true,text:'kt Ni'},min:1500},y1:{position:'right',title:{display:true,text:'잉여/적자 (kt)'},grid:{drawOnChartArea:false}}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+        datalabels:{display:function(ctx){if(ctx.datasetIndex!==2)return false;return ctx.dataIndex%3===0||Math.abs(ctx.parsed.y)>100;},anchor:'end',align:function(ctx){return ctx.parsed.y>=0?'top':'bottom';},font:{size:9},color:function(ctx){return ctx.parsed.y>=0?'#2e7d32':'#c62828';},formatter:function(v){return N(v).toFixed(0);}}}}});
+
+  mt('tw12',['연도','생산능력(kt)','소비(kt)','잉여/적자(kt)','가동률(%)','소비 YoY(%)','잉여율(%)'],yr.map((y,yi)=>{var i=ix[yi];var p=N(iho.production_capability[i]),c=N(iho.consumption[i]),s=N(iho.surplus_deficit[i]);var prevI=i>0?i-1:i;var cPrev=N(iho.consumption[prevI]);var yoy=yi===0?'-':((c/cPrev-1)*100).toFixed(1);return[y,F(p),F(c),F(s),p>0?(c/p*100).toFixed(1):'-',yoy,p>0?(s/p*100).toFixed(1):'-'];}));
+  ff('s12',yr);ff('e12',yr);
+
+  // 1-3: LME Price (line, left) + Stocks (bar, right)
+  var ql=stq.map(q=>q.quarter),qp=stq.map(q=>N(q.lme_price_usd)),qs=stq.map(q=>N(q.stocks));
+
+  C['cv13']=new Chart(document.getElementById('cv13'),{type:'bar',
+    data:{labels:ql,datasets:[
+      {type:'bar',label:'재고 (kt)',data:qs,backgroundColor:'rgba(21,101,192,0.3)',borderColor:'#1565C0',borderWidth:1,yAxisID:'y1',order:2,barPercentage:0.5},
+      {type:'line',label:'LME 가격 ($/t)',data:qp,borderColor:'#e53935',backgroundColor:'transparent',borderWidth:2.5,tension:.3,pointRadius:3,pointBackgroundColor:'#e53935',yAxisID:'y',order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{y:{position:'left',title:{display:true,text:'US$/t'}},y1:{position:'right',title:{display:true,text:'재고 (kt)'},grid:{drawOnChartArea:false}}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+        datalabels:{display:function(ctx){return ctx.datasetIndex===1;},anchor:'end',align:'top',font:{size:9,weight:'bold'},color:'#c62828',formatter:function(v){return '$'+N(v).toFixed(0);}}}}});
+
+  mt('tw13',['분기','가격($/t)','가격(c/lb)','공급(kt)','소비(kt)','균형(kt)','균형률(%)','재고(kt)','재고일수','가격 QoQ(%)'],stq.map((q,qi)=>{var bal=N(q.balance),sup=N(q.supply),stk=N(q.stocks);var prevP=qi>0?N(stq[qi-1].lme_price_usd):N(q.lme_price_usd);var qoq=qi===0?'-':((N(q.lme_price_usd)/prevP-1)*100).toFixed(1);return[q.quarter,F(q.lme_price_usd,0),F(q.lme_price_c_lb),F(q.supply),F(q.consumption),F(q.balance),sup>0?(bal/sup*100).toFixed(1):'-',F(q.stocks),q.stocks_days?F(q.stocks_days,0):'-',qoq];}));
+
+  // 1-4: Class Balance — grouped bar with value labels
+  C['cv14']=new Chart(document.getElementById('cv14'),{type:'bar',
+    data:{labels:cb.years,datasets:[
+      {label:'Class I',data:cb.class_i.total.map(N),backgroundColor:'rgba(21,101,192,0.7)'},
+      {label:'Class II',data:cb.class_ii.total.map(N),backgroundColor:'rgba(245,124,0,0.7)'},
+      {label:'황산염(NiSO₄)',data:cb.sulphate.total.map(N),backgroundColor:'rgba(67,160,71,0.7)'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{y:{title:{display:true,text:'잉여(+) / 적자(-) kt'},grid:{color:function(ctx){return ctx.tick.value===0?'#666':'#eee';}}}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+        datalabels:{display:function(ctx){return ctx.dataIndex===0||ctx.dataIndex===cb.years.length-1;},anchor:'end',align:function(ctx){return ctx.parsed.y>=0?'top':'bottom';},font:{size:8},color:'#555',formatter:function(v){return N(v).toFixed(0);}}}}});
+
+  mt('tw14',['연도','Class I(kt)','Class I 중국','Class I RoW','Class II(kt)','Class II 중국','Class II RoW','황산염(kt)','황산염 중국','황산염 RoW'],cb.years.map((y,i)=>[y,F(cb.class_i.total[i]),F(cb.class_i.china[i]),F(cb.class_i.row[i]),F(cb.class_ii.total[i]),F(cb.class_ii.china[i]),F(cb.class_ii.row[i]),F(cb.sulphate.total[i]),F(cb.sulphate.china[i]),F(cb.sulphate.row[i])]));
+}
+
+function initT2(){
+  var gt=D.tab2_ev_battery.sto_global_total,bc=D.tab2_ev_battery.sto_by_country,ch=D.tab2_ev_battery.sto_chemistry_pct,eu=D.tab2_ev_battery.sto_enduse_pct;
+  var gsd=D.tab1_global_balance.global_sector_demand;
+  var i24=gt.years.indexOf(2024),i28=gt.years.indexOf(2028);
+  var v24=N(gt.values[i24]),v28=N(gt.values[i28]),cagr=((Math.pow(v28/v24,1/4)-1)*100);
+
+  document.getElementById('k2').innerHTML=
+    '<div class="kpi"><div class="kpi-title">2024 글로벌 배터리 Ni</div><div class="kpi-val">'+F(v24,0)+'<span style="font-size:13px"> kt</span></div></div>'+
+    '<div class="kpi"><div class="kpi-title">2028 전망</div><div class="kpi-val">'+F(v28,0)+'<span style="font-size:13px"> kt</span></div></div>'+
+    '<div class="kpi green"><div class="kpi-title">CAGR (2024→2028)</div><div class="kpi-val">+'+cagr.toFixed(1)+'%</div><div class="kpi-note">연평균 성장률</div></div>'+
+    '<div class="kpi amber"><div class="kpi-title">EV 비중</div><div class="kpi-val">'+(N(eu["Electric vehicles"])*100).toFixed(1)+'%</div><div class="kpi-note">배터리 용도 중</div></div>'+
+    '<div class="kpi"><div class="kpi-title">Ni 양극재 비중</div><div class="kpi-val">'+N(ch['Total Ni pCAMs']).toFixed(1)+'%</div><div class="kpi-note">전체 양극재 대비</div></div>';
+
+  // 2-1: Country stacked + YoY growth line
+  var ctry=['China','South Korea','Japan','Indonesia','Total Europe','Total Africa'];
+  var cL=['중국','한국','일본','인도네시아','유럽','아프리카'];
+  var cC=['#e53935','#1565C0','#F57C00','#43a047','#7B1FA2','#6D4C41'];
+  var yoy=gt.values.map((v,i)=>i===0?0:((N(v)/N(gt.values[i-1])-1)*100));
+
+  C['cv21']=new Chart(document.getElementById('cv21'),{type:'bar',
+    data:{labels:bc.years,datasets:ctry.map((c,i)=>({label:cL[i],data:bc[c].map(N),backgroundColor:cC[i],stack:'s'})).concat([
+      {type:'line',label:'YoY 성장률 (%)',data:yoy,borderColor:'#333',backgroundColor:'transparent',borderWidth:2,borderDash:[4,3],tension:.3,pointRadius:3,yAxisID:'y1',order:0}
+    ])},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'}},y1:{position:'right',title:{display:true,text:'성장률 (%)'},grid:{drawOnChartArea:false}}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+        datalabels:{display:function(ctx){if(ctx.dataset.type==='line')return true;return false;},anchor:'end',align:'top',font:{size:9,weight:'bold'},color:'#333',formatter:function(v){return N(v).toFixed(1)+'%';}}}}});
+
+  mt('tw21',['연도'].concat(cL).concat(['글로벌']).concat(cL.map(s=>s+'(%)')).concat(['YoY(%)']),bc.years.map((y,i)=>{var g=N(gt.values[i]);var vals=ctry.map(c=>N(bc[c][i]));var yoy=i===0?'-':((g/N(gt.values[i-1])-1)*100).toFixed(1);return [y].concat(vals.map(v=>F(v))).concat([F(g)]).concat(vals.map(v=>g>0?(v/g*100).toFixed(1):'-')).concat([yoy]);}));
+
+  // 2-2: Battery Penetration Rate (IHO)
+  var penYrs=gsd.years.filter(y=>y>=2010&&y<=2040);
+  var penIdx=penYrs.map(y=>gsd.years.indexOf(y));
+  var batVals=penIdx.map(i=>N(gsd.sectors['Battery precursors'][i]));
+  var totVals=penIdx.map(i=>N(gsd.sectors['Total primary nickel demand'][i]));
+  var penPct=penIdx.map(i=>{var t=N(gsd.sectors['Total primary nickel demand'][i]);return t>0?N(gsd.sectors['Battery precursors'][i])/t*100:0;});
+
+  C['cv22']=new Chart(document.getElementById('cv22'),{type:'bar',
+    data:{labels:penYrs,datasets:[
+      {type:'bar',label:'배터리 Ni (kt)',data:batVals,backgroundColor:'rgba(229,57,53,0.6)',yAxisID:'y',order:2},
+      {type:'bar',label:'기타 Ni (kt)',data:penIdx.map((ii,idx)=>totVals[idx]-batVals[idx]),backgroundColor:'rgba(21,101,192,0.25)',yAxisID:'y',order:3},
+      {type:'line',label:'배터리 침투율 (%)',data:penPct,borderColor:'#e53935',backgroundColor:'transparent',borderWidth:2.5,tension:.3,pointRadius:2,yAxisID:'y1',order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'}},y1:{position:'right',title:{display:true,text:'침투율 (%)'},grid:{drawOnChartArea:false},min:0,max:40}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+        datalabels:{display:function(ctx){if(ctx.datasetIndex!==2)return false;return ctx.dataIndex%5===0;},anchor:'end',align:'top',font:{size:9,weight:'bold'},color:'#c62828',formatter:function(v){return N(v).toFixed(1)+'%';}}}}});
+
+  mt('tw22',['연도','배터리 Ni(kt)','비배터리 Ni(kt)','전체 Ni(kt)','침투율(%)','배터리 YoY(%)','전체 YoY(%)'],penYrs.map((y,i)=>{var b=batVals[i],t=totVals[i],nb=t-b;var byoy=i===0||batVals[i-1]===0?'-':((b/batVals[i-1]-1)*100).toFixed(1);var tyoy=i===0||totVals[i-1]===0?'-':((t/totVals[i-1]-1)*100).toFixed(1);return [y,F(b),F(nb),F(t),penPct[i].toFixed(1),byoy,tyoy];}));
+
+  // 2-3: Chemistry (horizontal bar)
+  var ck=Object.keys(ch).filter(k=>k!=='Total Ni pCAMs'&&k!=='Non-Ni pCAMs');
+  var cv=ck.map(k=>N(ch[k]));
+  var cc2=['#e53935','#1565C0','#F57C00','#43a047','#7B1FA2','#00897B','#E91E63','#00BCD4','#795548','#607D8B','#8BC34A','#3F51B5'];
+
+  C['cv23']=new Chart(document.getElementById('cv23'),{type:'bar',
+    data:{labels:ck,datasets:[{label:'비중 (%)',data:cv,backgroundColor:cc2.slice(0,ck.length)}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',scales:{x:{title:{display:true,text:'%'}}},
+      plugins:{legend:{display:false},datalabels:{display:true,anchor:'end',align:'right',font:{size:10,weight:'bold'},color:'#333',formatter:function(v){return N(v).toFixed(1)+'%';}}}}});
+
+  mt('tw23',['양극재','비중 (%)'],ck.map(k=>[k,N(ch[k]).toFixed(1)]).concat([['Ni 양극재 합계',N(ch['Total Ni pCAMs']).toFixed(1)],['비Ni (LFP 등)',N(ch['Non-Ni pCAMs']).toFixed(1)]]));
+
+  // 2-4: End Use (doughnut with labels)
+  var ek=Object.keys(eu),eL={'Electric vehicles':'전기차(EV)','Energy storage systems':'ESS','Portable electronics':'휴대전자','Power devices':'전력기기','Motive products':'이동형'};
+
+  C['cv24']=new Chart(document.getElementById('cv24'),{type:'doughnut',
+    data:{labels:ek.map(k=>eL[k]||k),datasets:[{data:ek.map(k=>N(eu[k])*100),backgroundColor:['#43a047','#1565C0','#F57C00','#7B1FA2','#6D4C41']}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11}}},
+      datalabels:{display:function(ctx){return ctx.parsed>2;},color:'white',font:{size:11,weight:'bold'},formatter:function(v){return v.toFixed(1)+'%';}}}}});
+
+  mt('tw24',['최종 용도','비중 (%)'],ek.map(k=>[eL[k]||k,(N(eu[k])*100).toFixed(1)]));
+}
+
+function initT3(){
+  var ap=D.tab3_ambatovy.iho_production,sp=D.tab3_ambatovy.sto_production,rf=D.tab5_supply.sto_production;
+  var mx=Math.max(...ap.values.filter(v=>v)),pk=ap.years[ap.values.indexOf(mx)];
+  var last=ap.years.filter((y,i)=>ap.values[i]>0).pop();
+  var i24=ap.years.indexOf(2024);
+
+  document.getElementById('k3').innerHTML=
+    '<div class="kpi amber"><div class="kpi-title">피크 생산</div><div class="kpi-val">'+F(mx)+' kt</div><div class="kpi-note">'+pk+'년</div></div>'+
+    '<div class="kpi"><div class="kpi-title">2024 실적</div><div class="kpi-val">'+F(ap.values[i24])+' kt</div></div>'+
+    '<div class="kpi"><div class="kpi-title">2030 전망 (IHO)</div><div class="kpi-val">'+F(ap.values[ap.years.indexOf(2030)])+' kt</div></div>'+
+    '<div class="kpi"><div class="kpi-title">마지막 생산연도</div><div class="kpi-val">'+last+'</div><div class="kpi-note">IHO 기준</div></div>';
+
+  // 3-1: Lifecycle bar
+  C['cv31']=new Chart(document.getElementById('cv31'),{type:'bar',
+    data:{labels:ap.years,datasets:[{label:'생산량 (kt)',data:ap.values.map(N),backgroundColor:ap.years.map(y=>y<=2024?'rgba(21,101,192,0.7)':'rgba(245,124,0,0.55)')}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{title:{display:true,text:'kt Ni'}}},
+      plugins:{legend:{display:false},datalabels:{display:function(ctx){var y=ap.years[ctx.dataIndex];return y===pk||y===2020||y===2024||y===2030||y===ap.years[ap.years.length-1];},anchor:'end',align:'top',font:{size:9,weight:'bold'},color:'#333',formatter:function(v){return N(v).toFixed(1);}}}}});
+
+  mt('tw31',['연도','생산(kt)','구분','피크대비(%)','YoY(%)','YoY 변화(kt)'],ap.years.map((y,i)=>{var v=N(ap.values[i]),prev=i>0?N(ap.values[i-1]):v;var yoy=i===0||prev===0?'-':((v/prev-1)*100).toFixed(1);var yoyDiff=i===0?'-':F(v-prev);return [y,F(v),y<=2024?'실적':'전망',mx>0?(v/mx*100).toFixed(1):'-',yoy,yoyDiff];}));
+  ff('s31',ap.years);ff('e31',ap.years);
+
+  // 3-2: STO vs IHO
+  var oly=sp.years,sv=sp.values.map(N),iv=oly.map(y=>{var i=ap.years.indexOf(y);return i!==-1?N(ap.values[i]):0;});
+
+  C['cv32']=new Chart(document.getElementById('cv32'),{type:'bar',
+    data:{labels:oly,datasets:[
+      {label:'월간 단기전망 (STO)',data:sv,backgroundColor:'rgba(21,101,192,0.7)'},
+      {label:'분기 장기전망 (IHO)',data:iv,backgroundColor:'rgba(245,124,0,0.7)'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{title:{display:true,text:'kt Ni'}}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+        datalabels:{display:true,anchor:'end',align:'top',font:{size:9},color:'#333',formatter:function(v){return N(v).toFixed(0);}}}}});
+
+  mt('tw32',['연도','STO(kt)','IHO(kt)','차이(kt)','차이율(%)','STO 출처','IHO 출처'],oly.map((y,i)=>{var d=sv[i]-iv[i];var pct2=iv[i]>0?(d/iv[i]*100).toFixed(1):'-';return [y,F(sv[i]),F(iv[i]),F(d),pct2,'2026년 2월','Q4 2025'];}));
+
+  // 3-3: Market Share
+  var shr=sp.years.map((y,i)=>{var ri=rf.years.indexOf(y);var g=ri!==-1?N(rf.refinery[ri]):1;return N(sv[i])/g*100;});
+
+  C['cv33']=new Chart(document.getElementById('cv33'),{type:'line',
+    data:{labels:sp.years,datasets:[{label:'점유율 (%)',data:shr,borderColor:'#43a047',backgroundColor:'rgba(67,160,71,0.15)',borderWidth:2.5,tension:.3,fill:true,pointRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{title:{display:true,text:'%'},min:0}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+        datalabels:{display:true,anchor:'end',align:'top',font:{size:10,weight:'bold'},color:'#2e7d32',formatter:function(v){return N(v).toFixed(2)+'%';}}}}});
+
+  mt('tw33',['연도','암바토비(kt)','글로벌 정제(kt)','점유율(%)','글로벌 YoY(%)','암바토비 피크대비(%)'],sp.years.map((y,i)=>{var ri=rf.years.indexOf(y);var gv=ri!==-1?N(rf.refinery[ri]):0;var prevRI=i>0?rf.years.indexOf(sp.years[i-1]):-1;var gPrev=prevRI!==-1?N(rf.refinery[prevRI]):0;var gYoY=i===0||gPrev===0?'-':((gv/gPrev-1)*100).toFixed(1);return [y,F(sv[i]),F(gv),shr[i].toFixed(2),gYoY,mx>0?(sv[i]/mx*100).toFixed(1):'-'];}));
+}
+
+function initT4(){
+  var kc=D.tab4_korea.sto_total_consumption,kb=D.tab4_korea.sto_battery_demand,ks=D.tab4_korea.iho_sector_breakdown,ss=D.tab4_korea.iho_ss_plant_capacity;
+  var i24=kc.years.indexOf(2024),i28=kc.years.indexOf(2028);
+  var br24=pct(N(kb.values[i24]),N(kc.values[i24])),br28=pct(N(kb.values[i28]),N(kc.values[i28]));
+
+  document.getElementById('k4').innerHTML=
+    '<div class="kpi"><div class="kpi-title">2024 총 Ni 소비</div><div class="kpi-val">'+F(kc.values[i24],0)+'<span style="font-size:13px"> kt</span></div></div>'+
+    '<div class="kpi"><div class="kpi-title">2024 배터리</div><div class="kpi-val">'+F(kb.values[i24],0)+'<span style="font-size:13px"> kt</span></div><div class="kpi-note">비중 '+br24+'%</div></div>'+
+    '<div class="kpi green"><div class="kpi-title">2028 배터리 전망</div><div class="kpi-val">'+F(kb.values[i28],0)+'<span style="font-size:13px"> kt</span></div><div class="kpi-note">비중 '+br28+'%</div></div>'+
+    '<div class="kpi amber"><div class="kpi-title">SS 설비 (2025)</div><div class="kpi-val">'+F(ss.total[ss.years.indexOf(2025)],0)+'</div><div class="kpi-note">kt SS</div></div>';
+
+  // 4-1: Korea consumption + battery bar + ratio line
+  var brs=kc.years.map((y,i)=>N(kc.values[i])>0?N(kb.values[i])/N(kc.values[i])*100:0);
+  var nonBat=kc.years.map((y,i)=>N(kc.values[i])-N(kb.values[i]));
+
+  C['cv41']=new Chart(document.getElementById('cv41'),{type:'bar',
+    data:{labels:kc.years,datasets:[
+      {type:'bar',label:'비배터리 (kt)',data:nonBat,backgroundColor:'rgba(158,158,158,0.5)',stack:'s',yAxisID:'y',order:3},
+      {type:'bar',label:'배터리 (kt)',data:kb.values.map(N),backgroundColor:'rgba(229,57,53,0.7)',stack:'s',yAxisID:'y',order:2},
+      {type:'line',label:'배터리 비중 (%)',data:brs,borderColor:'#F57C00',backgroundColor:'transparent',borderWidth:2.5,tension:.3,pointRadius:4,yAxisID:'y1',order:1}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{y:{stacked:true,title:{display:true,text:'kt Ni'}},y1:{position:'right',title:{display:true,text:'배터리 비중 (%)'},grid:{drawOnChartArea:false},min:0,max:60}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+        datalabels:{display:function(ctx){return ctx.datasetIndex===2;},anchor:'end',align:'top',font:{size:10,weight:'bold'},color:'#e65100',formatter:function(v){return N(v).toFixed(1)+'%';}}}}});
+
+  mt('tw41',['연도','총 소비(kt)','배터리(kt)','비배터리(kt)','배터리 비중(%)','총 YoY(%)','배터리 YoY(%)'],kc.years.map((y,i)=>{var t=N(kc.values[i]),b=N(kb.values[i]);var tYoY=i===0?'-':((t/N(kc.values[i-1])-1)*100).toFixed(1);var bYoY=i===0||N(kb.values[i-1])===0?'-':((b/N(kb.values[i-1])-1)*100).toFixed(1);return [y,F(t),F(b),F(nonBat[i]),brs[i].toFixed(1),tYoY,bYoY];}));
+
+  // 4-2: Korea Sector
+  var sn=['Primary nickel in stainless','Battery precursors','Non-Ferrous Alloys','Alloy Steel','Plating'];
+  var sl=['스테인리스','배터리 전구체','비철합금','합금강','도금'];
+  var sc=['#1565C0','#e53935','#F57C00','#7B1FA2','#00897B'];
+  var sy=ks.years.filter(y=>y>=2010&&y<=2035),si2=sy.map(y=>ks.years.indexOf(y));
+
+  C['cv42']=new Chart(document.getElementById('cv42'),{type:'bar',
+    data:{labels:sy,datasets:sn.map((n,i)=>({label:sl[i],data:si2.map(idx=>N(ks.sectors[n][idx])),backgroundColor:sc[i]}))},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'}}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},datalabels:{display:false}}}});
+
+  mt('tw42',['연도'].concat(sl).concat(['합계']).concat(sl.map(s=>s+'(%)')),sy.map((y,yi)=>{var i=si2[yi];var vals=sn.map(n=>N(ks.sectors[n][i]));var tot=vals.reduce((a,b)=>a+b,0);return [y].concat(vals.map(v=>F(v))).concat([F(tot)]).concat(vals.map(v=>tot>0?(v/tot*100).toFixed(1):'-'));}));
+  ff('s42',sy);ff('e42',sy);
+
+  // 4-3: SS Plant
+  var ssy=ss.years.filter(y=>y>=2000&&y<=2035),ssi=ssy.map(y=>ss.years.indexOf(y));
+
+  C['cv43']=new Chart(document.getElementById('cv43'),{type:'bar',
+    data:{labels:ssy,datasets:[
+      {label:'Posco',data:ssi.map(i=>N(ss.posco[i])),backgroundColor:'#1565C0'},
+      {label:'Seah Besteel',data:ssi.map(i=>N(ss.seah[i])),backgroundColor:'#F57C00'},
+      {label:'Bae Myung Metal',data:ssi.map(i=>N(ss.bae_myung[i])),backgroundColor:'#43a047'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt SS'}}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+        datalabels:{display:function(ctx){return ctx.datasetIndex===2&&(ctx.dataIndex%5===0||ctx.dataIndex===ssy.length-1);},anchor:'end',align:'top',font:{size:9,weight:'bold'},color:'#333',
+          formatter:function(v,ctx){var t=0;ctx.chart.data.datasets.forEach(ds=>{t+=N(ds.data[ctx.dataIndex]);});return t.toFixed(0);}}}}});
+
+  mt('tw43',['연도','Posco(kt)','Posco(%)','Seah(kt)','Seah(%)','BaeMy(kt)','BaeMy(%)','합계(kt)','YoY(%)'],ssy.map((y,yi)=>{var i=ssi[yi];var p=N(ss.posco[i]),s2=N(ss.seah[i]),b=N(ss.bae_myung[i]),t=N(ss.total[i]);var prevI=yi>0?ssi[yi-1]:-1;var tPrev=prevI>=0?N(ss.total[prevI]):t;var yoy2=yi===0?'-':((t/tPrev-1)*100).toFixed(1);return [y,F(p,0),t>0?(p/t*100).toFixed(1):'-',F(s2,0),t>0?(s2/t*100).toFixed(1):'-',F(b,0),t>0?(b/t*100).toFixed(1):'-',F(t,0),yoy2];}));
+  ff('s43',ssy);ff('e43',ssy);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  fetch('/data/woodmac_data.json')
+    .then(r => r.json())
+    .then(json => {
+      D = json;
+      TI.tab1 = 1;
+      try { initT1(); } catch(e) { console.error('T1', e); }
+    })
+    .catch(e => {
+      document.body.innerHTML = '<p style="color:red;padding:40px;font-size:16px">데이터 로드 실패: ' + e + '</p>';
+    });
+});
+</script>
+</body></html>
