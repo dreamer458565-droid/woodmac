@@ -306,37 +306,24 @@ function initT1(){
         datalabels:{
           display:function(ctx){
             var isLabelYear=labelYIdx.indexOf(ctx.dataIndex)>=0;
-            // 합계: 마지막 dataset의 레이블 연도
             if(ctx.datasetIndex===sN.length-1) return isLabelYear;
-            // 스테인리스(0)·배터리(1): 레이블 연도만
             if(ctx.datasetIndex===0||ctx.datasetIndex===1) return isLabelYear;
             return false;
           },
-          anchor:'center',align:'center',
-          color:function(ctx){
-            if(ctx.datasetIndex===sN.length-1) return '#333'; // 합계는 상단 검정
-            return 'white';
-          },
-          font:function(ctx){
-            if(ctx.datasetIndex===sN.length-1) return {size:10,weight:'bold'};
-            return {size:9,weight:'bold'};
-          },
+          anchor:function(ctx){return ctx.datasetIndex===sN.length-1?'end':'center';},
+          align:function(ctx){return ctx.datasetIndex===sN.length-1?'end':'center';},
+          color:function(ctx){return ctx.datasetIndex===sN.length-1?'#333':'white';},
+          font:function(ctx){return ctx.datasetIndex===sN.length-1?{size:10,weight:'bold'}:{size:9,weight:'bold'};},
           formatter:function(v,ctx){
-            // 마지막 dataset → 상단 총합 표시
             if(ctx.datasetIndex===sN.length-1){
               var t=0;ctx.chart.data.datasets.forEach(ds=>{t+=N(ds.data[ctx.dataIndex]);});
               return Math.round(t)+'kt';
             }
-            // 스테인리스·배터리: 이름+비중
             var tot=0;ctx.chart.data.datasets.forEach(ds=>{tot+=N(ds.data[ctx.dataIndex]);});
             var pct=tot>0?(v/tot*100).toFixed(0):'0';
-            var shortName=ctx.datasetIndex===0?'SS':'배터리';
-            return shortName+' '+pct+'%';
-          },
-          // 합계는 상단에 따로
-          anchor:function(ctx){return ctx.datasetIndex===sN.length-1?'end':'center';},
-          align:function(ctx){return ctx.datasetIndex===sN.length-1?'end':'center';}
-        }}}}});
+            return (ctx.datasetIndex===0?'SS':'배터리')+' '+pct+'%';
+          }
+        }}}});
 
   mt('tw11',['연도'].concat(sL).concat(['합계']).concat(sL.map(s=>s+'(%)')),gy.map((y,yi)=>{var i=gi[yi];var tot=N(gsd.sectors['Total primary nickel demand'][i]);var vals=sN.map(n=>N(gsd.sectors[n][i]));return [y].concat(vals.map(v=>F(v))).concat([F(tot)]).concat(vals.map(v=>tot>0?(v/tot*100).toFixed(1):'-'));}));
   ff('s11',gy);ff('e11',gy);
@@ -371,7 +358,7 @@ function initT1(){
             var label=N(v).toFixed(0)+'kt';
             if(firstDeficit) return '적자전환\n'+label;
             return label;
-          }}}}}};
+          }}}}});
 
   mt('tw12',['연도','생산능력(kt)','소비(kt)','잉여/적자(kt)','가동률(%)','소비 YoY(%)','잉여율(%)'],yr.map((y,yi)=>{var i=ix[yi];var p=N(iho.production_capability[i]),c=N(iho.consumption[i]),s=N(iho.surplus_deficit[i]);var prevI=i>0?i-1:i;var cPrev=N(iho.consumption[prevI]);var yoy=yi===0?'-':((c/cPrev-1)*100).toFixed(1);return[y,F(p),F(c),F(s),p>0?(c/p*100).toFixed(1):'-',yoy,p>0?(s/p*100).toFixed(1):'-'];}));
   ff('s12',yr);ff('e12',yr);
@@ -399,7 +386,7 @@ function initT1(){
             var data=ctx.chart.data.datasets[1].data;
             var minV=Math.min.apply(null,data);
             return ctx.parsed.y===minV?'bottom':'top';
-          },font:{size:9,weight:'bold'},color:'#c62828',formatter:function(v){return '$'+N(v).toFixed(0);}}}});
+          },font:{size:9,weight:'bold'},color:'#c62828',formatter:function(v){return '$'+N(v).toFixed(0);}}}}});
 
   mt('tw13',['분기','가격($/t)','가격(c/lb)','공급(kt)','소비(kt)','균형(kt)','균형률(%)','재고(kt)','재고일수','가격 QoQ(%)'],stq.map((q,qi)=>{var bal=N(q.balance),sup=N(q.supply),stk=N(q.stocks);var prevP=qi>0?N(stq[qi-1].lme_price_usd):N(q.lme_price_usd);var qoq=qi===0?'-':((N(q.lme_price_usd)/prevP-1)*100).toFixed(1);return[q.quarter,F(q.lme_price_usd,0),F(q.lme_price_c_lb),F(q.supply),F(q.consumption),F(q.balance),sup>0?(bal/sup*100).toFixed(1):'-',F(q.stocks),q.stocks_days?F(q.stocks_days,0):'-',qoq];}));
 
@@ -468,7 +455,7 @@ function initT2(){
             ctx.chart.data.datasets.forEach(function(ds){if(ds.type!=='line')sum+=N(ds.data[ctx.dataIndex]);});
             var pct=sum>0?(N(v)/sum*100).toFixed(0):0;
             return pct+'%';
-          }}}});
+          }}}}});
 
   mt('tw21',['연도'].concat(cL).concat(['글로벌']).concat(cL.map(s=>s+'(%)')).concat(['YoY(%)']),bc.years.map((y,i)=>{var g=N(gt.values[i]);var vals=ctry.map(c=>N(bc[c][i]));var yoy=i===0?'-':((g/N(gt.values[i-1])-1)*100).toFixed(1);return [y].concat(vals.map(v=>F(v))).concat([F(g)]).concat(vals.map(v=>g>0?(v/g*100).toFixed(1):'-')).concat([yoy]);}));
 
@@ -492,7 +479,7 @@ function initT2(){
             if(ctx.datasetIndex!==2)return false;
             var y=penYrs[ctx.dataIndex];
             return [2015,2020,2025,2030,2035].indexOf(y)>=0;
-          },anchor:'end',align:'top',font:{size:9,weight:'bold'},color:'#c62828',formatter:function(v){return N(v).toFixed(1)+'%';}}}});
+          },anchor:'end',align:'top',font:{size:9,weight:'bold'},color:'#c62828',formatter:function(v){return N(v).toFixed(1)+'%';}}}}});
 
   mt('tw22',['연도','배터리 Ni(kt)','비배터리 Ni(kt)','전체 Ni(kt)','침투율(%)','배터리 YoY(%)','전체 YoY(%)'],penYrs.map((y,i)=>{var b=batVals[i],t=totVals[i],nb=t-b;var byoy=i===0||batVals[i-1]===0?'-':((b/batVals[i-1]-1)*100).toFixed(1);var tyoy=i===0||totVals[i-1]===0?'-':((t/totVals[i-1]-1)*100).toFixed(1);return [y,F(b),F(nb),F(t),penPct[i].toFixed(1),byoy,tyoy];}));
 
@@ -667,7 +654,7 @@ function initT4(){
             if(ctx.datasetIndex!==2) return false;
             var y=kc.years[ctx.dataIndex];
             return [2022,2025,2028].indexOf(y)>=0;
-          },anchor:'end',align:'top',font:{size:10,weight:'bold'},color:'#e65100',formatter:function(v){return N(v).toFixed(1)+'%';}}}});
+          },anchor:'end',align:'top',font:{size:10,weight:'bold'},color:'#e65100',formatter:function(v){return N(v).toFixed(1)+'%';}}}}});
 
   mt('tw41',['연도','총 소비(kt)','배터리(kt)','비배터리(kt)','배터리 비중(%)','총 YoY(%)','배터리 YoY(%)'],kc.years.map((y,i)=>{var t=N(kc.values[i]),b=N(kb.values[i]);var tYoY=i===0?'-':((t/N(kc.values[i-1])-1)*100).toFixed(1);var bYoY=i===0||N(kb.values[i-1])===0?'-':((b/N(kb.values[i-1])-1)*100).toFixed(1);return [y,F(t),F(b),F(nonBat[i]),brs[i].toFixed(1),tYoY,bYoY];}));
 
@@ -695,7 +682,7 @@ function initT4(){
             var pct=sum>0?(N(v)/sum*100).toFixed(0):'0';
             var name=ctx.datasetIndex===0?'SS':'배터리';
             return name+'\n'+pct+'%';
-          }}}});
+          }}}}});
 
   mt('tw42',['연도'].concat(sl).concat(['합계']).concat(sl.map(s=>s+'(%)')),sy.map((y,yi)=>{var i=si2[yi];var vals=sn.map(n=>N(ks.sectors[n][i]));var tot=vals.reduce((a,b)=>a+b,0);return [y].concat(vals.map(v=>F(v))).concat([F(tot)]).concat(vals.map(v=>tot>0?(v/tot*100).toFixed(1):'-'));}));
   ff('s42',sy);ff('e42',sy);
