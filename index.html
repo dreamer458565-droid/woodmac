@@ -460,21 +460,19 @@ function initT3(){
     '<div class="kpi green"><div class="kpi-title">글로벌 제련 점유율 (2025E)</div><div class="kpi-val">'+(pct25?pct25.toFixed(1):'–')+'<span style="font-size:13px">%</span></div><div class="kpi-note">2026E '+(pct26?pct26.toFixed(1):'–')+'%</div></div>'+
     '<div class="kpi red"><div class="kpi-title">인도네시아 vs 중국 NPI (2025E)</div><div class="kpi-val">'+F(v25,0)+'<span style="font-size:11px"> vs </span>'+F(cV25,0)+'<span style="font-size:13px"> kt</span></div><div class="kpi-note">인도네시아가 중국의 '+(v25&&cV25?(v25/cV25*100).toFixed(0):'–')+'%</div></div>';
 
-  // Chart 1: 플랜트별 스택드 바 + 합계 datalabels
+  // Chart 1: 플랜트별 스택드 바 + 이름+값 표시
   var plantNames=['Tsingshan Morowali','Weda Bay','Indonesian Matte','Morowali HPAL'];
+  var shortNames={'Tsingshan Morowali':'Tsingshan','Weda Bay':'Weda Bay','Indonesian Matte':'Matte','Morowali HPAL':'HPAL'};
   var colors=['#1a4a7a','#2980b9','#f9a825','#43a047'];
   var datasets=plantNames.map(function(p,i){
     return{label:p,data:(plants[p]?plants[p].values:years.map(function(){return null;})),backgroundColor:colors[i],stack:'total'};
   });
-  // 합계 표시용 투명 더미 dataset
   var totals=years.map(function(y,yi){
     return plantNames.reduce(function(s,p){return s+(plants[p]&&plants[p].values[yi]?plants[p].values[yi]:0);},0);
   });
   datasets.push({
     label:'_total',data:totals,backgroundColor:'rgba(0,0,0,0)',stack:'total',
-    datalabels:{
-      display:true,anchor:'end',align:'end',
-      color:'#333',font:{size:11,weight:'bold'},
+    datalabels:{display:true,anchor:'end',align:'end',color:'#333',font:{size:11,weight:'bold'},
       formatter:function(v){return v>0?Math.round(v)+'kt':'';}
     }
   });
@@ -484,21 +482,25 @@ function initT3(){
     data:{labels:years,datasets:datasets},
     options:{
       responsive:true,maintainAspectRatio:false,
-      scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'},max:Math.max.apply(null,totals)*1.15}},
+      scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'},max:Math.max.apply(null,totals)*1.18}},
       plugins:{
         legend:{position:'bottom',labels:{filter:function(item){return item.text!=='_total';}}},
         datalabels:{
           display:function(ctx){
-            // 각 세그먼트 내부에 값 표시 (null/0 제외)
             if(ctx.dataset.label==='_total') return true;
             var v=ctx.dataset.data[ctx.dataIndex];
-            return v&&v>20;
+            return v&&v>40; // 충분히 큰 세그먼트만
           },
           anchor:'center',align:'center',
-          color:'white',font:{size:10,weight:'bold'},
+          color:function(ctx){
+            // Matte(노란배경)는 어두운 텍스트, 나머지 파란계열은 흰색
+            return ctx.dataset.label==='Indonesian Matte'?'#333':'white';
+          },
+          font:{size:10,weight:'bold'},
           formatter:function(v,ctx){
             if(ctx.dataset.label==='_total') return null;
-            return v?Math.round(v):'';
+            var sn=shortNames[ctx.dataset.label]||ctx.dataset.label;
+            return sn+'\n'+Math.round(v)+'kt';
           }
         }
       }
@@ -643,8 +645,12 @@ function initT6(){
 
   // Chart 61: 기존 운영 — 공정유형별 누적 바 (연도별 추이)
   var types=Object.keys(ex.by_type);
+  var lightTypes={'Matte':true,'MHP':true}; // 밝은 배경 → 어두운 텍스트
   var datasets61=types.map(function(t){
     return{label:t, data:ex.by_type[t], backgroundColor:typeColors[t]||'#aaa', stack:'s'};
+  });
+  var totals61=ex.years.map(function(_,yi){
+    return types.reduce(function(s,t){return s+(ex.by_type[t][yi]||0);},0);
   });
   if(_charts6ex){_charts6ex.destroy();}
   _charts6ex=new Chart(document.getElementById('c61'),{
@@ -652,15 +658,24 @@ function initT6(){
     data:{labels:ex.years, datasets:datasets61},
     options:{
       responsive:true,maintainAspectRatio:false,
-      scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'}}},
+      scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'},max:Math.max.apply(null,totals61)*1.12}},
       plugins:{
         legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}},
         datalabels:{
-          display:function(ctx){return ctx.datasetIndex===datasets61.length-1;},
-          anchor:'end',align:'end',color:'#333',font:{size:10,weight:'bold'},
+          display:function(ctx){
+            var v=ctx.dataset.data[ctx.dataIndex];
+            return v&&v>80; // 80kt 이상 세그먼트만 표시
+          },
+          anchor:'center',align:'center',
+          color:function(ctx){return lightTypes[ctx.dataset.label]?'#222':'white';},
+          font:{size:10,weight:'bold'},
           formatter:function(v,ctx){
-            var tot=0;ctx.chart.data.datasets.forEach(function(ds){tot+=ds.data[ctx.dataIndex]||0;});
-            return Math.round(tot)+'kt';
+            // 마지막 dataset이면 합계를 상단에 표시
+            if(ctx.datasetIndex===datasets61.length-1){
+              var tot=0;ctx.chart.data.datasets.forEach(function(ds){tot+=ds.data[ctx.dataIndex]||0;});
+              return Math.round(tot)+'kt';
+            }
+            return ctx.dataset.label+'\n'+Math.round(v)+'kt';
           }
         }
       }
@@ -686,13 +701,26 @@ function initT6(){
 function filterT6existing(){
   var ex=D.tab6_existing;
   var ft=document.getElementById('sel6t').value;
-  var filtered=ex.plants.filter(function(p){return !ft||p.type===ft;});
   var idx25=ex.years.indexOf(2025), idx26=ex.years.indexOf(2026);
+  var typeOrder=['NPI','Matte','MHP','MSP','FeNi','Sulphate','Oxide'];
+
+  var filtered=ex.plants.filter(function(p){return !ft||p.type===ft;});
+
+  // 정렬: 유형별 그룹 → 그룹 내 2025E 내림차순
+  filtered.sort(function(a,b){
+    var ta=typeOrder.indexOf(a.type), tb=typeOrder.indexOf(b.type);
+    if(ta<0) ta=99; if(tb<0) tb=99;
+    if(ta!==tb) return ta-tb;
+    var va=a.values[idx25]||0, vb=b.values[idx25]||0;
+    return vb-va;
+  });
+
   mt('t61',['플랜트','유형','2022','2023','2024','2025E','2026F','2027F'],
     filtered.map(function(p){
+      var v25=p.values[idx25], v26=p.values[idx26];
       return[p.name, p.type,
         F(p.values[0],1), F(p.values[1],1), F(p.values[2],1),
-        F(p.values[idx25],1), F(p.values[idx26],1),
+        v25!=null?F(v25,1):'-', v26!=null?F(v26,1):'-',
         p.values[6]!=null?F(p.values[6],1):'-'
       ];
     })
