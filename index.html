@@ -354,7 +354,24 @@ function initT1(){
     options:{responsive:true,maintainAspectRatio:false,
       scales:{y:{position:'left',title:{display:true,text:'kt Ni'},min:1500},y1:{position:'right',title:{display:true,text:'잉여/적자 (kt)'},grid:{drawOnChartArea:false}}},
       plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
-        datalabels:{display:function(ctx){if(ctx.datasetIndex!==2)return false;return ctx.dataIndex%3===0||Math.abs(ctx.parsed.y)>100;},anchor:'end',align:function(ctx){return ctx.parsed.y>=0?'top':'bottom';},font:{size:9},color:function(ctx){return ctx.parsed.y>=0?'#2e7d32':'#c62828';},formatter:function(v){return N(v).toFixed(0);}}}}});
+        datalabels:{
+          display:function(ctx){
+            if(ctx.datasetIndex!==2)return false;
+            var y=yr[ctx.dataIndex];
+            var isKeyYear=[2025,2030,2035].indexOf(y)>=0;
+            var firstDeficit=sdArr[ctx.dataIndex]<0&&(ctx.dataIndex===0||sdArr[ctx.dataIndex-1]>=0);
+            return isKeyYear||firstDeficit;
+          },
+          anchor:'end',align:function(ctx){return ctx.parsed.y>=0?'top':'bottom';},
+          font:{size:10,weight:'bold'},
+          color:function(ctx){return ctx.parsed.y>=0?'#2e7d32':'#c62828';},
+          formatter:function(v,ctx){
+            var y=yr[ctx.dataIndex];
+            var firstDeficit=sdArr[ctx.dataIndex]<0&&(ctx.dataIndex===0||sdArr[ctx.dataIndex-1]>=0);
+            var label=N(v).toFixed(0)+'kt';
+            if(firstDeficit) return '적자전환\n'+label;
+            return label;
+          }}}}}};
 
   mt('tw12',['연도','생산능력(kt)','소비(kt)','잉여/적자(kt)','가동률(%)','소비 YoY(%)','잉여율(%)'],yr.map((y,yi)=>{var i=ix[yi];var p=N(iho.production_capability[i]),c=N(iho.consumption[i]),s=N(iho.surplus_deficit[i]);var prevI=i>0?i-1:i;var cPrev=N(iho.consumption[prevI]);var yoy=yi===0?'-':((c/cPrev-1)*100).toFixed(1);return[y,F(p),F(c),F(s),p>0?(c/p*100).toFixed(1):'-',yoy,p>0?(s/p*100).toFixed(1):'-'];}));
   ff('s12',yr);ff('e12',yr);
@@ -370,7 +387,19 @@ function initT1(){
     options:{responsive:true,maintainAspectRatio:false,
       scales:{y:{position:'left',title:{display:true,text:'US$/t'}},y1:{position:'right',title:{display:true,text:'재고 (kt)'},grid:{drawOnChartArea:false}}},
       plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
-        datalabels:{display:function(ctx){return ctx.datasetIndex===1;},anchor:'end',align:'top',font:{size:9,weight:'bold'},color:'#c62828',formatter:function(v){return '$'+N(v).toFixed(0);}}}}});
+        datalabels:{display:function(ctx){
+            if(ctx.datasetIndex!==1) return false;
+            var data=ctx.chart.data.datasets[1].data;
+            var maxV=Math.max.apply(null,data);
+            var minV=Math.min.apply(null,data);
+            var v=ctx.parsed.y;
+            // 최고가, 최저가, 첫점, 마지막점만
+            return v===maxV||v===minV||ctx.dataIndex===0||ctx.dataIndex===data.length-1;
+          },anchor:'end',align:function(ctx){
+            var data=ctx.chart.data.datasets[1].data;
+            var minV=Math.min.apply(null,data);
+            return ctx.parsed.y===minV?'bottom':'top';
+          },font:{size:9,weight:'bold'},color:'#c62828',formatter:function(v){return '$'+N(v).toFixed(0);}}}});
 
   mt('tw13',['분기','가격($/t)','가격(c/lb)','공급(kt)','소비(kt)','균형(kt)','균형률(%)','재고(kt)','재고일수','가격 QoQ(%)'],stq.map((q,qi)=>{var bal=N(q.balance),sup=N(q.supply),stk=N(q.stocks);var prevP=qi>0?N(stq[qi-1].lme_price_usd):N(q.lme_price_usd);var qoq=qi===0?'-':((N(q.lme_price_usd)/prevP-1)*100).toFixed(1);return[q.quarter,F(q.lme_price_usd,0),F(q.lme_price_c_lb),F(q.supply),F(q.consumption),F(q.balance),sup>0?(bal/sup*100).toFixed(1):'-',F(q.stocks),q.stocks_days?F(q.stocks_days,0):'-',qoq];}));
 
@@ -415,7 +444,31 @@ function initT2(){
     options:{responsive:true,maintainAspectRatio:false,
       scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'}},y1:{position:'right',title:{display:true,text:'성장률 (%)'},grid:{drawOnChartArea:false}}},
       plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
-        datalabels:{display:function(ctx){if(ctx.dataset.type==='line')return true;return false;},anchor:'end',align:'top',font:{size:9,weight:'bold'},color:'#333',formatter:function(v){return N(v).toFixed(1)+'%';}}}}});
+        datalabels:{display:function(ctx){
+            if(ctx.dataset.type==='line') return true;
+            // 바: 중국(0), 인도네시아(3)의 마지막 2개 연도만
+            if(ctx.datasetIndex===0||ctx.datasetIndex===3){
+              var n=bc.years.length;
+              return ctx.dataIndex>=n-2;
+            }
+            return false;
+          },
+          anchor:function(ctx){return ctx.dataset.type==='line'?'end':'center';},
+          align:function(ctx){return ctx.dataset.type==='line'?'top':'center';},
+          font:{size:9,weight:'bold'},
+          color:function(ctx){
+            if(ctx.dataset.type==='line') return '#333';
+            return 'white';
+          },
+          formatter:function(v,ctx){
+            if(ctx.dataset.type==='line') return N(v).toFixed(1)+'%';
+            // 바: 비중 표시
+            var tot=N(ctx.chart.data.datasets.find(function(d){return d.type!=='line';})?0:0);
+            var sum=0;
+            ctx.chart.data.datasets.forEach(function(ds){if(ds.type!=='line')sum+=N(ds.data[ctx.dataIndex]);});
+            var pct=sum>0?(N(v)/sum*100).toFixed(0):0;
+            return pct+'%';
+          }}}});
 
   mt('tw21',['연도'].concat(cL).concat(['글로벌']).concat(cL.map(s=>s+'(%)')).concat(['YoY(%)']),bc.years.map((y,i)=>{var g=N(gt.values[i]);var vals=ctry.map(c=>N(bc[c][i]));var yoy=i===0?'-':((g/N(gt.values[i-1])-1)*100).toFixed(1);return [y].concat(vals.map(v=>F(v))).concat([F(g)]).concat(vals.map(v=>g>0?(v/g*100).toFixed(1):'-')).concat([yoy]);}));
 
@@ -435,7 +488,11 @@ function initT2(){
     options:{responsive:true,maintainAspectRatio:false,
       scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'}},y1:{position:'right',title:{display:true,text:'침투율 (%)'},grid:{drawOnChartArea:false},min:0,max:40}},
       plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
-        datalabels:{display:function(ctx){if(ctx.datasetIndex!==2)return false;return ctx.dataIndex%5===0;},anchor:'end',align:'top',font:{size:9,weight:'bold'},color:'#c62828',formatter:function(v){return N(v).toFixed(1)+'%';}}}}});
+        datalabels:{display:function(ctx){
+            if(ctx.datasetIndex!==2)return false;
+            var y=penYrs[ctx.dataIndex];
+            return [2015,2020,2025,2030,2035].indexOf(y)>=0;
+          },anchor:'end',align:'top',font:{size:9,weight:'bold'},color:'#c62828',formatter:function(v){return N(v).toFixed(1)+'%';}}}});
 
   mt('tw22',['연도','배터리 Ni(kt)','비배터리 Ni(kt)','전체 Ni(kt)','침투율(%)','배터리 YoY(%)','전체 YoY(%)'],penYrs.map((y,i)=>{var b=batVals[i],t=totVals[i],nb=t-b;var byoy=i===0||batVals[i-1]===0?'-':((b/batVals[i-1]-1)*100).toFixed(1);var tyoy=i===0||totVals[i-1]===0?'-':((t/totVals[i-1]-1)*100).toFixed(1);return [y,F(b),F(nb),F(t),penPct[i].toFixed(1),byoy,tyoy];}));
 
@@ -606,7 +663,11 @@ function initT4(){
     options:{responsive:true,maintainAspectRatio:false,
       scales:{y:{stacked:true,title:{display:true,text:'kt Ni'}},y1:{position:'right',title:{display:true,text:'배터리 비중 (%)'},grid:{drawOnChartArea:false},min:0,max:60}},
       plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
-        datalabels:{display:function(ctx){return ctx.datasetIndex===2;},anchor:'end',align:'top',font:{size:10,weight:'bold'},color:'#e65100',formatter:function(v){return N(v).toFixed(1)+'%';}}}}});
+        datalabels:{display:function(ctx){
+            if(ctx.datasetIndex!==2) return false;
+            var y=kc.years[ctx.dataIndex];
+            return [2022,2025,2028].indexOf(y)>=0;
+          },anchor:'end',align:'top',font:{size:10,weight:'bold'},color:'#e65100',formatter:function(v){return N(v).toFixed(1)+'%';}}}});
 
   mt('tw41',['연도','총 소비(kt)','배터리(kt)','비배터리(kt)','배터리 비중(%)','총 YoY(%)','배터리 YoY(%)'],kc.years.map((y,i)=>{var t=N(kc.values[i]),b=N(kb.values[i]);var tYoY=i===0?'-':((t/N(kc.values[i-1])-1)*100).toFixed(1);var bYoY=i===0||N(kb.values[i-1])===0?'-':((b/N(kb.values[i-1])-1)*100).toFixed(1);return [y,F(t),F(b),F(nonBat[i]),brs[i].toFixed(1),tYoY,bYoY];}));
 
@@ -619,7 +680,22 @@ function initT4(){
   C['cv42']=new Chart(document.getElementById('cv42'),{type:'bar',
     data:{labels:sy,datasets:sn.map((n,i)=>({label:sl[i],data:si2.map(idx=>N(ks.sectors[n][idx])),backgroundColor:sc[i]}))},
     options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'}}},
-      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},datalabels:{display:false}}}});
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},datalabels:{
+          display:function(ctx){
+            if(ctx.datasetIndex!==0&&ctx.datasetIndex!==1) return false;
+            var y=sy[ctx.dataIndex];
+            return [2020,2025,2030].indexOf(y)>=0;
+          },
+          anchor:'center',align:'center',
+          font:{size:9,weight:'bold'},
+          color:'white',
+          formatter:function(v,ctx){
+            var sum=0;
+            ctx.chart.data.datasets.forEach(function(ds){sum+=N(ds.data[ctx.dataIndex]);});
+            var pct=sum>0?(N(v)/sum*100).toFixed(0):'0';
+            var name=ctx.datasetIndex===0?'SS':'배터리';
+            return name+'\n'+pct+'%';
+          }}}});
 
   mt('tw42',['연도'].concat(sl).concat(['합계']).concat(sl.map(s=>s+'(%)')),sy.map((y,yi)=>{var i=si2[yi];var vals=sn.map(n=>N(ks.sectors[n][i]));var tot=vals.reduce((a,b)=>a+b,0);return [y].concat(vals.map(v=>F(v))).concat([F(tot)]).concat(vals.map(v=>tot>0?(v/tot*100).toFixed(1):'-'));}));
   ff('s42',sy);ff('e42',sy);
