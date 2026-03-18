@@ -187,43 +187,70 @@
     <div class="kpi-row" id="kpi6"></div>
     <!-- 용어 설명 박스 -->
     <div class="card" style="background:#f0f4f8;border-left:4px solid #1a4a7a;padding:14px 18px;margin-bottom:12px">
-      <h3 style="font-size:13px;margin-bottom:8px;color:#1a4a7a">📖 주요 공정·제품 용어 설명</h3>
+      <h3 style="font-size:13px;margin-bottom:8px;color:#1a4a7a">📖 주요 공정·제품 용어</h3>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;font-size:12px;line-height:1.6">
-        <div><b>HPAL</b> (High Pressure Acid Leach) — 라테라이트 광석을 고압산침출 처리. 산출물: <b>MHP</b>(Mixed Hydroxide Precipitate). 배터리향 황산니켈(Class 1) 원료로 전환.</div>
-        <div><b>NPI</b> (Nickel Pig Iron) — 저품위 라테라이트를 고로에서 제련한 니켈 합금. 스테인리스 제조용 Class 2 니켈. 중국·인도네시아가 주도.</div>
-        <div><b>FeNi</b> (Ferro-Nickel) — NPI와 유사한 스테인리스용 합금. 주로 황화광·라테라이트 혼합 제련. Class 2.</div>
-        <div><b>Matte / Laterite Smelting</b> — 라테라이트를 제련해 니켈 매트(고순도) 생산. 추가 정제 시 Class 1 니켈·황산니켈로 전환 가능. <b>MSP</b>(Mixed Sulphide Precipitate)와 유사 경로.</div>
-        <div><b>Mine/mill · Concentrate</b> — 황화광 광산에서 채굴 후 선광해 니켈 정광 생산. 제련소로 보내 추가 처리.</div>
-        <div><b>Integrated sulphide</b> — 황화광 채굴~제련~정제 수직통합. Class 1 니켈(전기니켈·브리켓) 생산. BHP, Norilsk 등 전통 메이저 방식.</div>
-        <div><b>Status 기준</b> — <b>Committed</b>: 투자결정 완료 / <b>Probable</b>: 유력(PFS 완료 수준) / <b>Possible</b>: 검토 단계</div>
+        <div><b>MSP</b> (Mixed Sulphide Precipitate) — 황화광·HPAL 공정의 중간 산출물. 추가 정제로 Class 1 니켈·황산니켈 전환. 운영 중 6개: Ambatovy, Murrin Murrin, Terrafame, Taganito, Moa, Coral Bay.</div>
+        <div><b>MHP</b> (Mixed Hydroxide Precipitate) — HPAL(고압산침출) 라테라이트 처리 산출물. 배터리향 황산니켈 원료. 인도네시아 신규 프로젝트 중심.</div>
+        <div><b>NPI</b> (Nickel Pig Iron) — 저품위 라테라이트를 고로 제련한 합금. 스테인리스용 Class 2. 중국·인도네시아 주도. 글로벌 최대 규모(2,024kt/2025).</div>
+        <div><b>Matte</b> — 라테라이트·황화광 고온 용융 제련 산출물. 추가 정제로 Class 1 또는 황산니켈 전환. Jinchuan, Norilsk 등.</div>
+        <div><b>FeNi</b> (Ferro-Nickel) — 스테인리스 직투입용 Class 2 합금. 주로 라테라이트 전기로 제련.</div>
+        <div><b>Status (신규 파이프라인)</b> — <b>Committed</b>: 투자결정 완료 / <b>Probable</b>: PFS 완료 수준 / <b>Possible</b>: 초기 검토</div>
       </div>
     </div>
-    <div class="card">
-      <h3>공정별 프로젝트 파이프라인</h3>
-      <div class="desc">WoodMac IHO Q4 2025 기준. <b>HPAL(MHP)</b>, <b>NPI/FeNi</b>, <b>Matte(MSP)</b>, <b>Sulphide</b> 공정별 프로젝트 수. Matte 5개는 인도네시아 라테라이트 용융·MSP 경로.</div>
-      <div class="ctrl">
-        <div class="vt">
-          <button class="vb on" id="v61" onclick="setV6('status')">Status별</button>
-          <button class="vb" id="v62" onclick="setV6('process')">공정별</button>
-          <button class="vb" id="v63" onclick="setV6('country')">국가별</button>
-        </div>
-      </div>
-      <div class="cc" style="height:400px"><canvas id="c61"></canvas></div>
+    <!-- 뷰 토글 -->
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="vb on" id="v6mode1" onclick="setV6mode('existing')">기존 운영 플랜트</button>
+      <button class="vb" id="v6mode2" onclick="setV6mode('pipeline')">신규 파이프라인</button>
     </div>
-    <div class="card">
-      <h3>프로젝트 목록</h3>
-      <div class="ctrl">
-        <div class="fg"><label>공정</label>
-          <select id="sel6p" onchange="filterT6()"><option value="">전체</option></select>
-        </div>
-        <div class="fg"><label>Status</label>
-          <select id="sel6s" onchange="filterT6()"><option value="">전체</option></select>
-        </div>
-        <div class="fg"><label>국가</label>
-          <select id="sel6c" onchange="filterT6()"><option value="">전체</option></select>
-        </div>
+    <!-- 기존 운영 섹션 -->
+    <div id="sec6existing">
+      <div class="card">
+        <h3>제련·정련 공정유형별 생산량 추이</h3>
+        <div class="desc">STO Feb 2026 기준. 전세계 제련 플랜트 102개, 총 <b>3,913kt (2025E)</b>. NPI가 압도적 1위(52%), MSP는 6개 플랜트 166kt.</div>
+        <div class="cc" style="height:380px"><canvas id="c61"></canvas></div>
       </div>
-      <div class="tc" id="t61"></div>
+      <div class="card">
+        <h3>공정유형별 플랜트 목록</h3>
+        <div class="ctrl">
+          <div class="fg"><label>공정유형</label>
+            <select id="sel6t" onchange="filterT6existing()"><option value="">전체</option>
+              <option>NPI</option><option>Matte</option><option>MHP</option>
+              <option>MSP</option><option>FeNi</option><option>Sulphate</option><option>Oxide</option>
+            </select>
+          </div>
+        </div>
+        <div class="tc" id="t61"></div>
+      </div>
+    </div>
+    <!-- 신규 파이프라인 섹션 -->
+    <div id="sec6pipeline" style="display:none">
+      <div class="card">
+        <h3>신규 프로젝트 파이프라인</h3>
+        <div class="desc">WoodMac IHO Q4 2025 기준 242개. 기존 운영 시설 미포함.</div>
+        <div class="ctrl">
+          <div class="vt">
+            <button class="vb on" id="v61" onclick="setV6('status')">Status별</button>
+            <button class="vb" id="v62" onclick="setV6('process')">공정별</button>
+            <button class="vb" id="v63" onclick="setV6('country')">국가별</button>
+          </div>
+        </div>
+        <div class="cc" style="height:380px"><canvas id="c62"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>프로젝트 목록</h3>
+        <div class="ctrl">
+          <div class="fg"><label>공정</label>
+            <select id="sel6p" onchange="filterT6()"><option value="">전체</option></select>
+          </div>
+          <div class="fg"><label>Status</label>
+            <select id="sel6s" onchange="filterT6()"><option value="">전체</option></select>
+          </div>
+          <div class="fg"><label>국가</label>
+            <select id="sel6c" onchange="filterT6()"><option value="">전체</option></select>
+          </div>
+        </div>
+        <div class="tc" id="t62"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -577,38 +604,74 @@ function initT4(){
 }
 
 // ────────────────────────────────
-// TAB 6: 프로젝트 파이프라인
+// TAB 6: 기존 운영 + 신규 파이프라인
 // ────────────────────────────────
-var _v6='status';
-var _charts6=null;
+var _v6='status', _charts6ex=null, _charts6pl=null, _v6mode='existing';
+
+function setV6mode(mode){
+  _v6mode=mode;
+  document.getElementById('v6mode1').classList.toggle('on', mode==='existing');
+  document.getElementById('v6mode2').classList.toggle('on', mode==='pipeline');
+  document.getElementById('sec6existing').style.display = mode==='existing'?'':'none';
+  document.getElementById('sec6pipeline').style.display = mode==='pipeline'?'':'none';
+}
 
 function setV6(mode){
   _v6=mode;
   ['v61','v62','v63'].forEach(function(id){document.getElementById(id).classList.remove('on');});
   document.getElementById(mode==='status'?'v61':mode==='process'?'v62':'v63').classList.add('on');
-  renderC6();
+  renderC6pipeline();
 }
 
 function initT6(){
   if(!D) return;
+  var ex=D.tab6_existing;
   var projs=D.tab6_projects.projects.filter(function(p){return p.status&&p.status!=='None';});
+  var typeColors={'NPI':'#1a4a7a','Matte':'#f9a825','MHP':'#43a047','MSP':'#e53935','FeNi':'#8e44ad','Sulphate':'#16a085','Oxide':'#7f8c8d'};
 
-  // KPI
-  var total=projs.length;
-  var committed=projs.filter(function(p){return p.status==='Committed';}).length;
-  var probable=projs.filter(function(p){return p.status==='Probable';}).length;
-  var hpal=projs.filter(function(p){return p.process&&p.process.includes('HPAL');}).length;
+  // KPI: 기존 운영 기준
+  var idx25=ex.years.indexOf(2025);
+  var total25=Object.values(ex.by_type).reduce(function(s,arr){return s+(arr[idx25]||0);},0);
+  var npi25=ex.by_type['NPI']?ex.by_type['NPI'][idx25]:0;
+  var msp25=ex.by_type['MSP']?ex.by_type['MSP'][idx25]:0;
+  var mhp25=ex.by_type['MHP']?ex.by_type['MHP'][idx25]:0;
   document.getElementById('kpi6').innerHTML=
-    '<div class="kpi"><div class="kpi-title">전체 프로젝트</div><div class="kpi-val">'+total+'</div><div class="kpi-note">파이프라인</div></div>'+
-    '<div class="kpi green"><div class="kpi-title">Committed</div><div class="kpi-val">'+committed+'</div><div class="kpi-note">확정</div></div>'+
-    '<div class="kpi amber"><div class="kpi-title">Probable</div><div class="kpi-val">'+probable+'</div><div class="kpi-note">유력</div></div>'+
-    '<div class="kpi"><div class="kpi-title">HPAL(MHP) 프로젝트</div><div class="kpi-val">'+hpal+'</div><div class="kpi-note">배터리향 MHP</div></div>';
+    '<div class="kpi"><div class="kpi-title">전세계 제련 총생산 (2025E)</div><div class="kpi-val">'+F(total25,0)+'<span style="font-size:13px"> kt</span></div><div class="kpi-note">102개 플랜트</div></div>'+
+    '<div class="kpi"><div class="kpi-title">NPI (1위)</div><div class="kpi-val">'+F(npi25,0)+'<span style="font-size:13px"> kt</span></div><div class="kpi-note">'+(total25?(npi25/total25*100).toFixed(0):'–')+'% | 30개 플랜트</div></div>'+
+    '<div class="kpi red"><div class="kpi-title">MSP (Ambatovy 포함)</div><div class="kpi-val">'+F(msp25,0)+'<span style="font-size:13px"> kt</span></div><div class="kpi-note">'+(total25?(msp25/total25*100).toFixed(1):'–')+'% | 6개 플랜트</div></div>'+
+    '<div class="kpi green"><div class="kpi-title">MHP/HPAL</div><div class="kpi-val">'+F(mhp25,0)+'<span style="font-size:13px"> kt</span></div><div class="kpi-note">'+(total25?(mhp25/total25*100).toFixed(1):'–')+'% | 17개 플랜트</div></div>';
 
-  // 필터 select 채우기
+  // Chart 61: 기존 운영 — 공정유형별 누적 바 (연도별 추이)
+  var types=Object.keys(ex.by_type);
+  var datasets61=types.map(function(t){
+    return{label:t, data:ex.by_type[t], backgroundColor:typeColors[t]||'#aaa', stack:'s'};
+  });
+  if(_charts6ex){_charts6ex.destroy();}
+  _charts6ex=new Chart(document.getElementById('c61'),{
+    type:'bar',
+    data:{labels:ex.years, datasets:datasets61},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'}}},
+      plugins:{
+        legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}},
+        datalabels:{
+          display:function(ctx){return ctx.datasetIndex===datasets61.length-1;},
+          anchor:'end',align:'end',color:'#333',font:{size:10,weight:'bold'},
+          formatter:function(v,ctx){
+            var tot=0;ctx.chart.data.datasets.forEach(function(ds){tot+=ds.data[ctx.dataIndex]||0;});
+            return Math.round(tot)+'kt';
+          }
+        }
+      }
+    }
+  });
+  filterT6existing();
+
+  // 파이프라인 필터 select
   var processes=[...new Set(projs.map(function(p){return p.process;}).filter(function(p){return p&&p!=='None';}))].sort();
   var statuses=[...new Set(projs.map(function(p){return p.status;}).filter(function(s){return s&&s!=='None';}))].sort();
   var countries=[...new Set(projs.map(function(p){return p.country;}).filter(function(c){return c&&c!=='None';}))].sort();
-
   var sel6p=document.getElementById('sel6p');
   processes.forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;sel6p.appendChild(o);});
   var sel6s=document.getElementById('sel6s');
@@ -616,15 +679,30 @@ function initT6(){
   var sel6c=document.getElementById('sel6c');
   countries.forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;sel6c.appendChild(o);});
 
-  renderC6();
+  renderC6pipeline();
   filterT6();
 }
 
-function renderC6(){
-  var projs=D.tab6_projects.projects.filter(function(p){return p.status&&p.status!=='None';});
-  var canvas=document.getElementById('c61');
-  if(_charts6){_charts6.destroy();_charts6=null;}
+function filterT6existing(){
+  var ex=D.tab6_existing;
+  var ft=document.getElementById('sel6t').value;
+  var filtered=ex.plants.filter(function(p){return !ft||p.type===ft;});
+  var idx25=ex.years.indexOf(2025), idx26=ex.years.indexOf(2026);
+  mt('t61',['플랜트','유형','2022','2023','2024','2025E','2026F','2027F'],
+    filtered.map(function(p){
+      return[p.name, p.type,
+        F(p.values[0],1), F(p.values[1],1), F(p.values[2],1),
+        F(p.values[idx25],1), F(p.values[idx26],1),
+        p.values[6]!=null?F(p.values[6],1):'-'
+      ];
+    })
+  );
+}
 
+function renderC6pipeline(){
+  var projs=D.tab6_projects.projects.filter(function(p){return p.status&&p.status!=='None';});
+  var canvas=document.getElementById('c62');
+  if(_charts6pl){_charts6pl.destroy();_charts6pl=null;}
   var labels,dataMap;
   if(_v6==='status'){
     var order=['Committed','Probable','Possible','Tentative'];
@@ -634,29 +712,20 @@ function renderC6(){
     var counter={};
     projs.forEach(function(p){if(p.process&&p.process!=='None')counter[p.process]=(counter[p.process]||0)+1;});
     var sorted=Object.entries(counter).sort(function(a,b){return b[1]-a[1];}).slice(0,12);
-    labels=sorted.map(function(e){return e[0];});
-    dataMap=sorted.map(function(e){return e[1];});
+    labels=sorted.map(function(e){return e[0];}); dataMap=sorted.map(function(e){return e[1];});
   } else {
     var counter2={};
     projs.forEach(function(p){if(p.country&&p.country!=='None')counter2[p.country]=(counter2[p.country]||0)+1;});
     var sorted2=Object.entries(counter2).sort(function(a,b){return b[1]-a[1];}).slice(0,15);
-    labels=sorted2.map(function(e){return e[0];});
-    dataMap=sorted2.map(function(e){return e[1];});
+    labels=sorted2.map(function(e){return e[0];}); dataMap=sorted2.map(function(e){return e[1];});
   }
-
   var colors=['#1a4a7a','#2980b9','#43a047','#f9a825','#e53935','#8e44ad','#16a085','#d35400','#2c3e50','#7f8c8d','#c0392b','#27ae60','#e67e22','#3498db','#9b59b6'];
-
-  _charts6=new Chart(canvas,{
-    type:'bar',
-    data:{
-      labels:labels,
-      datasets:[{data:dataMap,backgroundColor:labels.map(function(_,i){return colors[i%colors.length];})}]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},datalabels:{display:false}},
-      scales:{y:{title:{display:true,text:'프로젝트 수'}}}
-    }
+  _charts6pl=new Chart(canvas,{type:'bar',
+    data:{labels:labels,datasets:[{data:dataMap,backgroundColor:labels.map(function(_,i){return colors[i%colors.length];}),
+      datalabels:{display:true,anchor:'end',align:'end',color:'#333',font:{size:11,weight:'bold'},formatter:function(v){return v+'개';}}}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},datalabels:{}},
+      scales:{y:{title:{display:true,text:'프로젝트 수'}}}}
   });
 }
 
@@ -665,18 +734,10 @@ function filterT6(){
   var fp=document.getElementById('sel6p').value;
   var fs=document.getElementById('sel6s').value;
   var fc=document.getElementById('sel6c').value;
-
-  var filtered=projs.filter(function(p){
-    return (!fp||p.process===fp)&&(!fs||p.status===fs)&&(!fc||p.country===fc);
-  });
-
-  mt('t61',
-    ['프로젝트','국가','Status','공정','제품','Cap(kt)','Start'],
-    filtered.map(function(p){return[
-      p.name,p.country||'-',p.status||'-',p.process||'-',p.product||'-',
-      p.nom_prod_kt?F(p.nom_prod_kt,0):'-',
-      p.start_year||'-'
-    ];})
+  var filtered=projs.filter(function(p){return(!fp||p.process===fp)&&(!fs||p.status===fs)&&(!fc||p.country===fc);});
+  mt('t62',['프로젝트','국가','Status','공정','제품','Cap(kt)','Start'],
+    filtered.map(function(p){return[p.name,p.country||'-',p.status||'-',p.process||'-',p.product||'-',
+      p.nom_prod_kt?F(p.nom_prod_kt,0):'-',p.start_year||'-'];})
   );
 }
 
