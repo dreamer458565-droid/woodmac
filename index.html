@@ -294,12 +294,49 @@ function initT1(){
   var sC=['#1565C0','#e53935','#F57C00','#7B1FA2','#00897B','#6D4C41','#78909C'];
   var gy=gsd.years.filter(y=>y>=2015&&y<=2035),gi=gy.map(y=>gsd.years.indexOf(y));
 
+  // 5년 단위 연도 인덱스 (레이블 표시용)
+  var labelYears=[2015,2020,2025,2030,2035];
+  var labelYIdx=labelYears.map(y=>gy.indexOf(y)).filter(i=>i>=0);
+
   C['cv11']=new Chart(document.getElementById('cv11'),{type:'bar',
     data:{labels:gy,datasets:sN.map((n,si)=>({label:sL[si],data:gi.map(i=>N(gsd.sectors[n][i])),backgroundColor:sC[si]}))},
-    options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'}}},
-    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
-      datalabels:{display:function(ctx){return ctx.datasetIndex===sN.length-1;},anchor:'end',align:'top',font:{size:9,weight:'bold'},color:'#333',
-        formatter:function(v,ctx){var t=0;ctx.chart.data.datasets.forEach(ds=>{t+=N(ds.data[ctx.dataIndex]);});return t.toFixed(0);}}}}});
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'kt Ni'},max:6200}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+        datalabels:{
+          display:function(ctx){
+            var isLabelYear=labelYIdx.indexOf(ctx.dataIndex)>=0;
+            // 합계: 마지막 dataset의 레이블 연도
+            if(ctx.datasetIndex===sN.length-1) return isLabelYear;
+            // 스테인리스(0)·배터리(1): 레이블 연도만
+            if(ctx.datasetIndex===0||ctx.datasetIndex===1) return isLabelYear;
+            return false;
+          },
+          anchor:'center',align:'center',
+          color:function(ctx){
+            if(ctx.datasetIndex===sN.length-1) return '#333'; // 합계는 상단 검정
+            return 'white';
+          },
+          font:function(ctx){
+            if(ctx.datasetIndex===sN.length-1) return {size:10,weight:'bold'};
+            return {size:9,weight:'bold'};
+          },
+          formatter:function(v,ctx){
+            // 마지막 dataset → 상단 총합 표시
+            if(ctx.datasetIndex===sN.length-1){
+              var t=0;ctx.chart.data.datasets.forEach(ds=>{t+=N(ds.data[ctx.dataIndex]);});
+              return Math.round(t)+'kt';
+            }
+            // 스테인리스·배터리: 이름+비중
+            var tot=0;ctx.chart.data.datasets.forEach(ds=>{tot+=N(ds.data[ctx.dataIndex]);});
+            var pct=tot>0?(v/tot*100).toFixed(0):'0';
+            var shortName=ctx.datasetIndex===0?'SS':'배터리';
+            return shortName+' '+pct+'%';
+          },
+          // 합계는 상단에 따로
+          anchor:function(ctx){return ctx.datasetIndex===sN.length-1?'end':'center';},
+          align:function(ctx){return ctx.datasetIndex===sN.length-1?'end':'center';}
+        }}}}});
 
   mt('tw11',['연도'].concat(sL).concat(['합계']).concat(sL.map(s=>s+'(%)')),gy.map((y,yi)=>{var i=gi[yi];var tot=N(gsd.sectors['Total primary nickel demand'][i]);var vals=sN.map(n=>N(gsd.sectors[n][i]));return [y].concat(vals.map(v=>F(v))).concat([F(tot)]).concat(vals.map(v=>tot>0?(v/tot*100).toFixed(1):'-'));}));
   ff('s11',gy);ff('e11',gy);
